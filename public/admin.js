@@ -1,4 +1,4 @@
-// ===== ADMIN DASHBOARD LOGIC v2 - Mobile Fixed =====
+// ===== ADMIN DASHBOARD LOGIC v3 - Sign out prompts removed, errors visible =====
 
 const state = {
   adminToken: localStorage.getItem('solara_admin_token') || null,
@@ -8,6 +8,7 @@ const state = {
   currentUserName: null,
   messages: [],
   pollTimer: null,
+  lastError: null,
 };
 
 const els = {
@@ -101,12 +102,12 @@ async function handleAdminLogin(e) {
   }
 }
 
+// Sign out WITHOUT any confirm() prompt
 function handleLogout(e) {
   if (e) {
     e.preventDefault();
     e.stopPropagation();
   }
-  if (!confirm('Sign out?')) return;
   state.adminToken = null;
   state.adminExpiresAt = 0;
   localStorage.removeItem('solara_admin_token');
@@ -143,17 +144,30 @@ async function loadUsers(silent = false) {
       body: JSON.stringify({}),
     });
 
-    if (response.status === 401) {
-      handleLogout();
+    const rawText = await response.text();
+    let data = {};
+    try { data = JSON.parse(rawText); } catch (e) { data = { error: rawText }; }
+
+    if (!response.ok) {
+      state.lastError = 'HTTP ' + response.status + ': ' + (data.error || rawText.slice(0, 200));
+      renderUsersError();
       return;
     }
 
-    const data = await response.json();
+    state.lastError = null;
     state.users = data.users || [];
     renderUsers();
   } catch (err) {
-    if (!silent) console.error('Failed to load users:', err);
+    state.lastError = 'Network error: ' + (err.message || String(err));
+    renderUsersError();
   }
+}
+
+function renderUsersError() {
+  els.usersList.innerHTML =
+    '<div class="admin-empty" style="color:#ff6b6b;padding:16px;font-size:12px;line-height:1.5;word-break:break-word;">' +
+      '<strong>Error loading users:</strong><br>' + escapeHtml(state.lastError || 'Unknown error') +
+    '</div>';
 }
 
 function renderUsers() {
