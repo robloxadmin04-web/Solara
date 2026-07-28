@@ -1,4 +1,4 @@
-// ===== ADMIN DASHBOARD LOGIC =====
+// ===== ADMIN DASHBOARD LOGIC v2 - Mobile Fixed =====
 
 const state = {
   adminToken: localStorage.getItem('solara_admin_token') || null,
@@ -7,9 +7,6 @@ const state = {
   currentUserId: null,
   currentUserName: null,
   messages: [],
-  supabase: null,
-  messageChannel: null,
-  usersChannel: null,
   pollTimer: null,
 };
 
@@ -25,6 +22,7 @@ const els = {
   userSearch: document.getElementById('userSearch'),
   emptyState: document.getElementById('emptyState'),
   chat: document.getElementById('adminChat'),
+  chatBackBtn: document.getElementById('chatBackBtn'),
   chatAvatar: document.getElementById('chatAvatar'),
   chatUserName: document.getElementById('chatUserName'),
   chatUserStatus: document.getElementById('chatUserStatus'),
@@ -34,12 +32,12 @@ const els = {
   sendBtn: document.getElementById('adminSendBtn'),
 };
 
-// ===== INIT =====
 function init() {
   els.loginForm.addEventListener('submit', handleAdminLogin);
   els.logoutBtn.addEventListener('click', handleLogout);
   els.chatForm.addEventListener('submit', handleSendMessage);
   els.userSearch.addEventListener('input', filterUsers);
+  els.chatBackBtn.addEventListener('click', closeChat);
   els.chatInput.addEventListener('input', autoResize);
   els.chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -103,7 +101,11 @@ async function handleAdminLogin(e) {
   }
 }
 
-function handleLogout() {
+function handleLogout(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   if (!confirm('Sign out?')) return;
   state.adminToken = null;
   state.adminExpiresAt = 0;
@@ -113,7 +115,6 @@ function handleLogout() {
   showLogin();
 }
 
-// ===== POLLING (simpler than realtime subscriptions for this scale) =====
 function startPolling() {
   stopPolling();
   state.pollTimer = setInterval(() => {
@@ -121,7 +122,7 @@ function startPolling() {
     if (state.currentUserId) {
       loadMessages(state.currentUserId, true);
     }
-  }, 3000); // every 3 seconds
+  }, 3000);
 }
 
 function stopPolling() {
@@ -131,7 +132,6 @@ function stopPolling() {
   }
 }
 
-// ===== LOAD USERS =====
 async function loadUsers(silent = false) {
   try {
     const response = await fetch('/api/chat-support?action=users', {
@@ -196,7 +196,6 @@ function filterUsers() {
   renderUsers();
 }
 
-// ===== SELECT USER + LOAD MESSAGES =====
 async function selectUser(userId, userName) {
   state.currentUserId = userId;
   state.currentUserName = userName;
@@ -206,10 +205,21 @@ async function selectUser(userId, userName) {
   els.chatAvatar.textContent = userName.charAt(0).toUpperCase();
   els.chatUserName.textContent = userName;
 
+  // Mobile: slide to chat view
+  els.app.classList.add('chat-open');
+
   renderUsers();
   await loadMessages(userId);
   await markAsRead(userId);
-  els.chatInput.focus();
+}
+
+function closeChat() {
+  state.currentUserId = null;
+  state.currentUserName = null;
+  els.app.classList.remove('chat-open');
+  els.chat.style.display = 'none';
+  els.emptyState.style.display = 'flex';
+  renderUsers();
 }
 
 async function loadMessages(userId, silent = false) {
@@ -226,7 +236,6 @@ async function loadMessages(userId, silent = false) {
     const data = await response.json();
     const newMessages = data.messages || [];
 
-    // Only re-render if messages changed
     if (newMessages.length !== state.messages.length ||
         (newMessages.length > 0 && state.messages.length > 0 &&
          newMessages[newMessages.length - 1].id !== state.messages[state.messages.length - 1].id)) {
@@ -273,7 +282,6 @@ async function markAsRead(userId) {
   }
 }
 
-// ===== SEND MESSAGE =====
 async function handleSendMessage(e) {
   e.preventDefault();
   const content = els.chatInput.value.trim();
@@ -283,7 +291,6 @@ async function handleSendMessage(e) {
   els.chatInput.value = '';
   autoResize();
 
-  // Optimistic UI - show message immediately
   const optimistic = {
     id: 'tmp_' + Date.now(),
     sender: 'admin',
@@ -307,11 +314,9 @@ async function handleSendMessage(e) {
       }),
     });
 
-    // Reload to get real ID
     await loadMessages(state.currentUserId);
   } catch (err) {
     console.error('Send failed:', err);
-    // Remove optimistic message on error
     state.messages = state.messages.filter(m => m.id !== optimistic.id);
     renderMessages();
     alert('Failed to send message. Please try again.');
@@ -326,7 +331,6 @@ function autoResize() {
   els.chatInput.style.height = Math.min(els.chatInput.scrollHeight, 120) + 'px';
 }
 
-// ===== UTILITIES =====
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = String(text);
