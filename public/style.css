@@ -37,19 +37,14 @@
   --radius-lg: 12px;
 }
 
-html,
-body {
+html, body {
   height: 100%;
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv11", "ss01";
+  font-feature-settings: 'cv11', 'ss01';
 }
 
 button {
@@ -166,15 +161,47 @@ button {
   font-size: 13px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  transition: background 0.15s, color 0.15s;
   display: flex;
   align-items: center;
   gap: 9px;
+  position: relative;
+}
+
+.chat-item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-item-delete {
+  opacity: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.chat-item:hover .chat-item-delete,
+.chat-item.active .chat-item-delete {
+  opacity: 1;
+}
+
+.chat-item-delete:hover {
+  background: var(--bg-active);
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .chat-item-delete {
+    opacity: 1;
+  }
 }
 
 .chat-item:hover {
@@ -290,9 +317,7 @@ button {
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .icon-btn:hover {
@@ -308,6 +333,9 @@ button {
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .model-badge {
@@ -319,6 +347,12 @@ button {
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+#presetBadge {
+  background: transparent;
+  color: var(--text-muted);
 }
 
 /* ===== CHAT CONTAINER ===== */
@@ -381,9 +415,7 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   text-align: left;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .suggestion-card:hover {
@@ -439,14 +471,8 @@ button {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .avatar {
@@ -520,15 +546,9 @@ button {
   letter-spacing: -0.01em;
 }
 
-.message-text h1 {
-  font-size: 20px;
-}
-.message-text h2 {
-  font-size: 17px;
-}
-.message-text h3 {
-  font-size: 15px;
-}
+.message-text h1 { font-size: 20px; }
+.message-text h2 { font-size: 17px; }
+.message-text h3 { font-size: 15px; }
 
 .message-text a {
   color: var(--text-primary);
@@ -545,7 +565,7 @@ button {
   background: var(--bg-tertiary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 12.5px;
   color: var(--text-primary);
   border: 1px solid var(--border);
@@ -597,7 +617,7 @@ button {
 }
 
 .code-lang {
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 500;
   text-transform: lowercase;
   font-size: 11px;
@@ -612,9 +632,7 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition:
-    background 0.15s,
-    color 0.15s;
+  transition: background 0.15s, color 0.15s;
   font-weight: 500;
 }
 
@@ -649,24 +667,12 @@ button {
   animation: bounce 1.4s infinite;
 }
 
-.typing-dot:nth-child(2) {
-  animation-delay: 0.15s;
-}
-.typing-dot:nth-child(3) {
-  animation-delay: 0.3s;
-}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.4;
-  }
-  30% {
-    transform: translateY(-6px);
-    opacity: 1;
-  }
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
 }
 
 /* ===== INPUT AREA ===== */
@@ -748,7 +754,7 @@ button {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 1px 5px;
-  font-family: "JetBrains Mono", monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
   color: var(--text-muted);
 }
