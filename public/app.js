@@ -6,6 +6,7 @@ const state = {
   chats: JSON.parse(localStorage.getItem('solara_chats') || '[]'),
   currentChatId: null,
   currentModel: localStorage.getItem('solara_model') || 'deepseek',
+  currentPreset: localStorage.getItem('solara_preset') || 'general',
   isLoading: false,
 };
 
@@ -19,6 +20,8 @@ const els = {
   chatList: document.getElementById('chatList'),
   modelSelect: document.getElementById('modelSelect'),
   modelBadge: document.getElementById('modelBadge'),
+  presetSelect: document.getElementById('presetSelect'),
+  presetBadge: document.getElementById('presetBadge'),
   clearBtn: document.getElementById('clearBtn'),
   exportBtn: document.getElementById('exportBtn'),
   chatContainer: document.getElementById('chatContainer'),
@@ -36,6 +39,7 @@ const ICONS = {
   chat: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
   copy: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`,
   check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`,
 };
 
 // ===== MARKED CONFIG (Markdown Renderer) =====
@@ -58,10 +62,21 @@ const MODEL_LABELS = {
   gemini: 'Gemini 2.0 Flash',
 };
 
+// ===== SYSTEM PROMPT PRESETS =====
+const PRESET_LABELS = {
+  general: 'General',
+  react: 'React Expert',
+  debugger: 'Debugger',
+  explainer: 'Explainer',
+  reviewer: 'Code Reviewer',
+};
+
 // ===== INIT =====
 function init() {
   els.modelSelect.value = state.currentModel;
   els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
+  els.presetSelect.value = state.currentPreset;
+  els.presetBadge.textContent = PRESET_LABELS[state.currentPreset];
   renderChatList();
   attachEventListeners();
   autoResizeTextarea();
@@ -80,10 +95,14 @@ function attachEventListeners() {
     if (window.innerWidth <= 768) closeSidebar();
   });
 
-  // Clear current chat
+  // Delete current chat entirely (from view + history)
   els.clearBtn.addEventListener('click', () => {
-    if (state.messages.length === 0) return;
-    if (confirm('Clear this chat?')) {
+    if (state.messages.length === 0 && !state.currentChatId) return;
+    if (confirm('Delete this chat? This cannot be undone.')) {
+      if (state.currentChatId) {
+        state.chats = state.chats.filter((c) => c.id !== state.currentChatId);
+        localStorage.setItem('solara_chats', JSON.stringify(state.chats));
+      }
       startNewChat();
     }
   });
@@ -96,6 +115,13 @@ function attachEventListeners() {
     state.currentModel = e.target.value;
     localStorage.setItem('solara_model', state.currentModel);
     els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
+  });
+
+  // Preset switcher
+  els.presetSelect.addEventListener('change', (e) => {
+    state.currentPreset = e.target.value;
+    localStorage.setItem('solara_preset', state.currentPreset);
+    els.presetBadge.textContent = PRESET_LABELS[state.currentPreset];
   });
 
   // Chat form
@@ -209,15 +235,40 @@ function renderChatList() {
       (chat) => `
     <div class="chat-item ${chat.id === state.currentChatId ? 'active' : ''}" data-id="${chat.id}">
       ${ICONS.chat}
-      <span style="flex:1; overflow:hidden; text-overflow:ellipsis">${escapeHtml(chat.title)}</span>
+      <span class="chat-item-title">${escapeHtml(chat.title)}</span>
+      <button class="chat-item-delete" data-delete-id="${chat.id}" aria-label="Delete chat" title="Delete chat">
+        ${ICONS.trash}
+      </button>
     </div>
   `
     )
     .join('');
 
   els.chatList.querySelectorAll('.chat-item').forEach((item) => {
-    item.addEventListener('click', () => loadChat(item.getAttribute('data-id')));
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.chat-item-delete')) return;
+      loadChat(item.getAttribute('data-id'));
+    });
   });
+
+  els.chatList.querySelectorAll('.chat-item-delete').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const chatId = btn.getAttribute('data-delete-id');
+      deleteChat(chatId);
+    });
+  });
+}
+
+function deleteChat(chatId) {
+  if (!confirm('Delete this chat? This cannot be undone.')) return;
+  state.chats = state.chats.filter((c) => c.id !== chatId);
+  localStorage.setItem('solara_chats', JSON.stringify(state.chats));
+  if (state.currentChatId === chatId) {
+    startNewChat();
+  } else {
+    renderChatList();
+  }
 }
 
 // ===== MESSAGE HANDLING =====
@@ -245,6 +296,7 @@ async function handleSubmit(e) {
       body: JSON.stringify({
         messages: state.messages,
         model: state.currentModel,
+        preset: state.currentPreset,
       }),
     });
 
