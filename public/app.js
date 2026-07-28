@@ -932,5 +932,247 @@ function renderDashboard() {
   els.statFavMode.textContent = getFavoriteMode();
 }
 
+
+
+// =====================================================
+// ===== SUPPORT CHAT WIDGET =====
+// =====================================================
+
+const supportState = {
+  isOpen: false,
+  userId: localStorage.getItem('solara_support_user_id') || null,
+  userName: localStorage.getItem('solara_support_user_name') || null,
+  messages: [],
+  pollTimer: null,
+  lastMessageId: null,
+  unreadCount: 0,
+};
+
+const supportEls = {
+  widget: document.getElementById('supportWidget'),
+  bubble: document.getElementById('supportBubble'),
+  badge: document.getElementById('supportBadge'),
+  window: document.getElementById('supportWindow'),
+  namePrompt: document.getElementById('supportNamePrompt'),
+  nameForm: document.getElementById('supportNameForm'),
+  nameInput: document.getElementById('supportNameInput'),
+  chat: document.getElementById('supportChat'),
+  messages: document.getElementById('supportMessages'),
+  inputForm: document.getElementById('supportInputForm'),
+  input: document.getElementById('supportInput'),
+};
+
+function initSupport() {
+  if (!supportEls.widget) return;
+
+  supportEls.bubble.addEventListener('click', toggleSupport);
+  supportEls.nameForm.addEventListener('submit', handleNameSubmit);
+  supportEls.inputForm.addEventListener('submit', handleSupportSend);
+  supportEls.input.addEventListener('input', autoResizeSupport);
+  supportEls.input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      supportEls.inputForm.dispatchEvent(new Event('submit'));
+    }
+  });
+
+  // Show correct screen based on state
+  if (supportState.userId && supportState.userName) {
+    supportEls.namePrompt.style.display = 'none';
+    supportEls.chat.style.display = 'flex';
+  } else {
+    supportEls.namePrompt.style.display = 'flex';
+    supportEls.chat.style.display = 'none';
+  }
+
+  // Start polling for unread messages in background
+  if (supportState.userId) {
+    startSupportPolling();
+  }
+}
+
+function toggleSupport() {
+  supportState.isOpen = !supportState.isOpen;
+  supportEls.window.classList.toggle('open', supportState.isOpen);
+  supportEls.bubble.classList.toggle('open', supportState.isOpen);
+
+  if (supportState.isOpen && supportState.userId) {
+    loadSupportMessages();
+    supportEls.input.focus();
+    // Clear unread badge when opened
+    supportState.unreadCount = 0;
+    updateBadge();
+  }
+}
+
+async function handleNameSubmit(e) {
+  e.preventDefault();
+  const name = supportEls.nameInput.value.trim();
+  if (!name) return;
+
+  // Generate user ID
+  const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+  try {
+    const response = await fetch('/api/chat-support?action=register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (state.authToken || ''),
+      },
+      body: JSON.stringify({ user_id: userId, user_name: name }),
+    });
+
+    if (!response.ok) throw new Error('Registration failed');
+
+    supportState.userId = userId;
+    supportState.userName = name;
+    localStorage.setItem('solara_support_user_id', userId);
+    localStorage.setItem('solara_support_user_name', name);
+
+    supportEls.namePrompt.style.display = 'none';
+    supportEls.chat.style.display = 'flex';
+    supportEls.input.focus();
+
+    startSupportPolling();
+    loadSupportMessages();
+  } catch (err) {
+    alert('Could not start chat. Please try again.');
+  }
+}
+
+async function handleSupportSend(e) {
+  e.preventDefault();
+  const content = supportEls.input.value.trim();
+  if (!content || !supportState.userId) return;
+
+  supportEls.input.value = '';
+  autoResizeSupport();
+
+  // Optimistic
+  const optimistic = {
+    id: 'tmp_' + Date.now(),
+    sender: 'user',
+    content,
+    created_at: new Date().toISOString(),
+  };
+  supportState.messages.push(optimistic);
+  renderSupportMessages();
+
+  try {
+    await fetch('/api/chat-support?action=send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (state.authToken || ''),
+      },
+      body: JSON.stringify({
+        user_id: supportState.userId,
+        user_name: supportState.userName,
+        content,
+      }),
+    });
+
+    await loadSupportMessages();
+  } catch (err) {
+    supportState.messages = supportState.messages.filter(m => m.id !== optimistic.id);
+    renderSupportMessages();
+    alert('Failed to send. Please try again.');
+  }
+}
+
+async function loadSupportMessages() {
+  if (!supportState.userId) return;
+
+  try {
+    const response = await fetch('/api/chat-support?action=list', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (state.authToken || ''),
+      },
+      body: JSON.stringify({ user_id: supportState.userId }),
+    });
+
+    const data = await response.json();
+    const newMessages = data.messages || [];
+    const prevCount = supportState.messages.length;
+
+    supportState.messages = newMessages;
+    renderSupportMessages();
+
+    // Check for new admin messages while closed
+    if (!supportState.isOpen && newMessages.length > prevCount) {
+      const newFromAdmin = newMessages.slice(prevCount).filter(m => m.sender === 'admin').length;
+      if (newFromAdmin > 0) {
+        supportState.unreadCount += newFromAdmin;
+        updateBadge();
+      }
+    }
+
+    // Mark as read if chat is open
+    if (supportState.isOpen) {
+      await markSupportRead();
+    }
+  } catch (err) {
+    console.error('Support load failed:', err);
+  }
+}
+
+async function markSupportRead() {
+  try {
+    await fetch('/api/chat-support?action=mark-read', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (state.authToken || ''),
+      },
+      body: JSON.stringify({ user_id: supportState.userId }),
+    });
+  } catch (err) {}
+}
+
+function renderSupportMessages() {
+  if (supportState.messages.length === 0) {
+    supportEls.messages.innerHTML = '<div class="support-msg-empty">Send a message to start the conversation.</div>';
+    return;
+  }
+
+  supportEls.messages.innerHTML = supportState.messages.map(msg => {
+    const cls = msg.sender === 'user' ? 'mine' : 'theirs';
+    return '<div class="support-msg ' + cls + '">' + escapeHtml(msg.content) + '</div>';
+  }).join('');
+
+  requestAnimationFrame(() => {
+    supportEls.messages.scrollTop = supportEls.messages.scrollHeight;
+  });
+}
+
+function updateBadge() {
+  if (supportState.unreadCount > 0) {
+    supportEls.badge.textContent = supportState.unreadCount > 9 ? '9+' : supportState.unreadCount;
+    supportEls.badge.style.display = 'flex';
+  } else {
+    supportEls.badge.style.display = 'none';
+  }
+}
+
+function autoResizeSupport() {
+  supportEls.input.style.height = 'auto';
+  supportEls.input.style.height = Math.min(supportEls.input.scrollHeight, 80) + 'px';
+}
+
+function startSupportPolling() {
+  if (supportState.pollTimer) clearInterval(supportState.pollTimer);
+  supportState.pollTimer = setInterval(() => {
+    if (supportState.userId) {
+      loadSupportMessages();
+    }
+  }, 5000); // every 5 seconds
+}
+
+// Initialize after main init runs
+setTimeout(initSupport, 100);
+
 // ===== START =====
 init();
