@@ -3,29 +3,30 @@
 // ===== STATE =====
 const state = {
   messages: [],
-  chats: JSON.parse(localStorage.getItem("solara_chats") || "[]"),
+  chats: JSON.parse(localStorage.getItem('solara_chats') || '[]'),
   currentChatId: null,
-  currentModel: localStorage.getItem("solara_model") || "deepseek",
+  currentModel: localStorage.getItem('solara_model') || 'deepseek',
   isLoading: false,
 };
 
 // ===== DOM ELEMENTS =====
 const els = {
-  sidebar: document.getElementById("sidebar"),
-  sidebarOverlay: document.getElementById("sidebarOverlay"),
-  menuBtn: document.getElementById("menuBtn"),
-  sidebarClose: document.getElementById("sidebarClose"),
-  newChatBtn: document.getElementById("newChatBtn"),
-  chatList: document.getElementById("chatList"),
-  modelSelect: document.getElementById("modelSelect"),
-  modelBadge: document.getElementById("modelBadge"),
-  clearBtn: document.getElementById("clearBtn"),
-  chatContainer: document.getElementById("chatContainer"),
-  welcomeScreen: document.getElementById("welcomeScreen"),
-  messages: document.getElementById("messages"),
-  chatForm: document.getElementById("chatForm"),
-  userInput: document.getElementById("userInput"),
-  sendBtn: document.getElementById("sendBtn"),
+  sidebar: document.getElementById('sidebar'),
+  sidebarOverlay: document.getElementById('sidebarOverlay'),
+  menuBtn: document.getElementById('menuBtn'),
+  sidebarClose: document.getElementById('sidebarClose'),
+  newChatBtn: document.getElementById('newChatBtn'),
+  chatList: document.getElementById('chatList'),
+  modelSelect: document.getElementById('modelSelect'),
+  modelBadge: document.getElementById('modelBadge'),
+  clearBtn: document.getElementById('clearBtn'),
+  exportBtn: document.getElementById('exportBtn'),
+  chatContainer: document.getElementById('chatContainer'),
+  welcomeScreen: document.getElementById('welcomeScreen'),
+  messages: document.getElementById('messages'),
+  chatForm: document.getElementById('chatForm'),
+  userInput: document.getElementById('userInput'),
+  sendBtn: document.getElementById('sendBtn'),
 };
 
 // ===== SVG ICONS =====
@@ -53,8 +54,8 @@ marked.setOptions({
 
 // ===== MODEL LABELS =====
 const MODEL_LABELS = {
-  deepseek: "DeepSeek V3",
-  gemini: "Gemini 2.0 Flash",
+  deepseek: 'DeepSeek V3',
+  gemini: 'Gemini 2.0 Flash',
 };
 
 // ===== INIT =====
@@ -69,78 +70,81 @@ function init() {
 // ===== EVENT LISTENERS =====
 function attachEventListeners() {
   // Sidebar toggle (mobile)
-  els.menuBtn.addEventListener("click", openSidebar);
-  els.sidebarClose.addEventListener("click", closeSidebar);
-  els.sidebarOverlay.addEventListener("click", closeSidebar);
+  els.menuBtn.addEventListener('click', openSidebar);
+  els.sidebarClose.addEventListener('click', closeSidebar);
+  els.sidebarOverlay.addEventListener('click', closeSidebar);
 
   // New chat
-  els.newChatBtn.addEventListener("click", () => {
+  els.newChatBtn.addEventListener('click', () => {
     startNewChat();
     if (window.innerWidth <= 768) closeSidebar();
   });
 
   // Clear current chat
-  els.clearBtn.addEventListener("click", () => {
+  els.clearBtn.addEventListener('click', () => {
     if (state.messages.length === 0) return;
-    if (confirm("Clear this chat?")) {
+    if (confirm('Clear this chat?')) {
       startNewChat();
     }
   });
 
+  // Export chat as Markdown
+  els.exportBtn.addEventListener('click', exportChatAsMarkdown);
+
   // Model switcher
-  els.modelSelect.addEventListener("change", (e) => {
+  els.modelSelect.addEventListener('change', (e) => {
     state.currentModel = e.target.value;
-    localStorage.setItem("solara_model", state.currentModel);
+    localStorage.setItem('solara_model', state.currentModel);
     els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
   });
 
   // Chat form
-  els.chatForm.addEventListener("submit", handleSubmit);
+  els.chatForm.addEventListener('submit', handleSubmit);
 
   // Textarea auto-resize + Enter to send
-  els.userInput.addEventListener("input", autoResizeTextarea);
-  els.userInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  els.userInput.addEventListener('input', autoResizeTextarea);
+  els.userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      els.chatForm.dispatchEvent(new Event("submit"));
+      els.chatForm.dispatchEvent(new Event('submit'));
     }
   });
 
   // Suggestion cards
-  document.querySelectorAll(".suggestion-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const prompt = card.getAttribute("data-prompt");
+  document.querySelectorAll('.suggestion-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const prompt = card.getAttribute('data-prompt');
       els.userInput.value = prompt;
       autoResizeTextarea();
-      els.chatForm.dispatchEvent(new Event("submit"));
+      els.chatForm.dispatchEvent(new Event('submit'));
     });
   });
 }
 
 // ===== SIDEBAR (MOBILE) =====
 function openSidebar() {
-  els.sidebar.classList.add("open");
-  els.sidebarOverlay.classList.add("active");
+  els.sidebar.classList.add('open');
+  els.sidebarOverlay.classList.add('active');
 }
 
 function closeSidebar() {
-  els.sidebar.classList.remove("open");
-  els.sidebarOverlay.classList.remove("active");
+  els.sidebar.classList.remove('open');
+  els.sidebarOverlay.classList.remove('active');
 }
 
 // ===== TEXTAREA AUTO-RESIZE =====
 function autoResizeTextarea() {
-  els.userInput.style.height = "auto";
-  els.userInput.style.height = Math.min(els.userInput.scrollHeight, 200) + "px";
+  els.userInput.style.height = 'auto';
+  els.userInput.style.height = Math.min(els.userInput.scrollHeight, 200) + 'px';
 }
 
 // ===== CHAT MANAGEMENT =====
 function startNewChat() {
   state.messages = [];
   state.currentChatId = null;
-  els.messages.innerHTML = "";
-  els.welcomeScreen.style.display = "flex";
-  els.userInput.value = "";
+  els.messages.innerHTML = '';
+  els.welcomeScreen.style.display = 'flex';
+  els.userInput.value = '';
   autoResizeTextarea();
   els.userInput.focus();
   renderChatList();
@@ -152,8 +156,8 @@ function loadChat(chatId) {
 
   state.currentChatId = chatId;
   state.messages = [...chat.messages];
-  els.messages.innerHTML = "";
-  els.welcomeScreen.style.display = "none";
+  els.messages.innerHTML = '';
+  els.welcomeScreen.style.display = 'none';
 
   state.messages.forEach((msg) => {
     appendMessageToDOM(msg.role, msg.content);
@@ -169,12 +173,11 @@ function saveCurrentChat() {
   if (state.messages.length === 0) return;
 
   if (!state.currentChatId) {
-    state.currentChatId = "chat_" + Date.now();
-    const firstUserMsg = state.messages.find((m) => m.role === "user");
+    state.currentChatId = 'chat_' + Date.now();
+    const firstUserMsg = state.messages.find((m) => m.role === 'user');
     const title = firstUserMsg
-      ? firstUserMsg.content.slice(0, 40) +
-        (firstUserMsg.content.length > 40 ? "..." : "")
-      : "New chat";
+      ? firstUserMsg.content.slice(0, 40) + (firstUserMsg.content.length > 40 ? '...' : '')
+      : 'New chat';
 
     state.chats.unshift({
       id: state.currentChatId,
@@ -191,32 +194,29 @@ function saveCurrentChat() {
   }
 
   state.chats = state.chats.slice(0, 20);
-  localStorage.setItem("solara_chats", JSON.stringify(state.chats));
+  localStorage.setItem('solara_chats', JSON.stringify(state.chats));
   renderChatList();
 }
 
 function renderChatList() {
   if (state.chats.length === 0) {
-    els.chatList.innerHTML =
-      '<div class="chat-item-empty">No recent chats</div>';
+    els.chatList.innerHTML = '<div class="chat-item-empty">No recent chats</div>';
     return;
   }
 
   els.chatList.innerHTML = state.chats
     .map(
       (chat) => `
-    <div class="chat-item ${chat.id === state.currentChatId ? "active" : ""}" data-id="${chat.id}">
+    <div class="chat-item ${chat.id === state.currentChatId ? 'active' : ''}" data-id="${chat.id}">
       ${ICONS.chat}
       <span style="flex:1; overflow:hidden; text-overflow:ellipsis">${escapeHtml(chat.title)}</span>
     </div>
-  `,
+  `
     )
-    .join("");
+    .join('');
 
-  els.chatList.querySelectorAll(".chat-item").forEach((item) => {
-    item.addEventListener("click", () =>
-      loadChat(item.getAttribute("data-id")),
-    );
+  els.chatList.querySelectorAll('.chat-item').forEach((item) => {
+    item.addEventListener('click', () => loadChat(item.getAttribute('data-id')));
   });
 }
 
@@ -227,10 +227,10 @@ async function handleSubmit(e) {
   const text = els.userInput.value.trim();
   if (!text || state.isLoading) return;
 
-  els.welcomeScreen.style.display = "none";
+  els.welcomeScreen.style.display = 'none';
 
-  addMessage("user", text);
-  els.userInput.value = "";
+  addMessage('user', text);
+  els.userInput.value = '';
   autoResizeTextarea();
 
   const typingId = showTypingIndicator();
@@ -239,9 +239,9 @@ async function handleSubmit(e) {
   els.sendBtn.disabled = true;
 
   try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: state.messages,
         model: state.currentModel,
@@ -256,21 +256,17 @@ async function handleSubmit(e) {
     }
 
     const data = await response.json();
-    const reply = data.reply || data.message || "";
+    const reply = data.reply || data.message || '';
 
     if (!reply) {
-      throw new Error("No response received from the AI.");
+      throw new Error('No response received from the AI.');
     }
 
-    addMessage("assistant", reply);
+    addMessage('assistant', reply);
     saveCurrentChat();
   } catch (err) {
     removeTypingIndicator(typingId);
-    showError(
-      "Error: " +
-        err.message +
-        "\n\nNote: The backend and API keys still need to be set up on Vercel.",
-    );
+    showError('Error: ' + err.message + '\n\nNote: The backend and API keys still need to be set up on Vercel.');
   } finally {
     state.isLoading = false;
     els.sendBtn.disabled = false;
@@ -285,16 +281,16 @@ function addMessage(role, content) {
 }
 
 function appendMessageToDOM(role, content) {
-  const msgEl = document.createElement("div");
+  const msgEl = document.createElement('div');
   msgEl.className = `message ${role}`;
 
-  const avatarIcon = role === "user" ? ICONS.user : ICONS.assistant;
-  const roleName = role === "user" ? "You" : MODEL_LABELS[state.currentModel];
+  const avatarIcon = role === 'user' ? ICONS.user : ICONS.assistant;
+  const roleName = role === 'user' ? 'You' : MODEL_LABELS[state.currentModel];
 
   const renderedContent =
-    role === "assistant"
+    role === 'assistant'
       ? renderMarkdown(content)
-      : `<p>${escapeHtml(content).replace(/\n/g, "<br>")}</p>`;
+      : `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
 
   msgEl.innerHTML = `
     <div class="avatar">${avatarIcon}</div>
@@ -306,28 +302,28 @@ function appendMessageToDOM(role, content) {
 
   els.messages.appendChild(msgEl);
 
-  msgEl.querySelectorAll("pre").forEach(enhanceCodeBlock);
+  msgEl.querySelectorAll('pre').forEach(enhanceCodeBlock);
 }
 
 function renderMarkdown(text) {
   try {
     return marked.parse(text);
   } catch (e) {
-    return `<p>${escapeHtml(text).replace(/\n/g, "<br>")}</p>`;
+    return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
   }
 }
 
 function enhanceCodeBlock(pre) {
-  const code = pre.querySelector("code");
+  const code = pre.querySelector('code');
   if (!code) return;
 
-  const lang = (code.className.match(/language-(\w+)/) || [])[1] || "code";
+  const lang = (code.className.match(/language-(\w+)/) || [])[1] || 'code';
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "code-block-wrapper";
+  const wrapper = document.createElement('div');
+  wrapper.className = 'code-block-wrapper';
 
-  const header = document.createElement("div");
-  header.className = "code-block-header";
+  const header = document.createElement('div');
+  header.className = 'code-block-header';
   header.innerHTML = `
     <span class="code-lang">${lang}</span>
     <button class="copy-btn" type="button">
@@ -340,25 +336,68 @@ function enhanceCodeBlock(pre) {
   wrapper.appendChild(header);
   wrapper.appendChild(pre);
 
-  const copyBtn = header.querySelector(".copy-btn");
-  copyBtn.addEventListener("click", () => {
+  const copyBtn = header.querySelector('.copy-btn');
+  copyBtn.addEventListener('click', () => {
     const text = code.textContent;
     navigator.clipboard.writeText(text).then(() => {
-      copyBtn.classList.add("copied");
+      copyBtn.classList.add('copied');
       copyBtn.innerHTML = `${ICONS.check}<span>Copied</span>`;
       setTimeout(() => {
-        copyBtn.classList.remove("copied");
+        copyBtn.classList.remove('copied');
         copyBtn.innerHTML = `${ICONS.copy}<span>Copy</span>`;
       }, 2000);
     });
   });
 }
 
+// ===== EXPORT CHAT AS MARKDOWN =====
+function exportChatAsMarkdown() {
+  if (state.messages.length === 0) {
+    alert('No messages to export yet. Start a conversation first.');
+    return;
+  }
+
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  const timeStr = now.toTimeString().slice(0, 5); // HH:MM
+  const modelName = MODEL_LABELS[state.currentModel];
+
+  // Build Markdown content
+  let md = `# Solara AI Chat Export\n\n`;
+  md += `- **Date:** ${dateStr} ${timeStr}\n`;
+  md += `- **Model:** ${modelName}\n`;
+  md += `- **Messages:** ${state.messages.length}\n\n`;
+  md += `---\n\n`;
+
+  state.messages.forEach((msg, i) => {
+    const role = msg.role === 'user' ? 'You' : modelName;
+    md += `## ${role}\n\n`;
+    md += `${msg.content}\n\n`;
+    if (i < state.messages.length - 1) {
+      md += `---\n\n`;
+    }
+  });
+
+  md += `\n---\n\n_Exported from Solara AI · ${dateStr}_\n`;
+
+  // Trigger download
+  const filename = `solara-chat-${dateStr}-${timeStr.replace(':', '')}.md`;
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // ===== TYPING INDICATOR =====
 function showTypingIndicator() {
-  const id = "typing_" + Date.now();
-  const msgEl = document.createElement("div");
-  msgEl.className = "message assistant";
+  const id = 'typing_' + Date.now();
+  const msgEl = document.createElement('div');
+  msgEl.className = 'message assistant';
   msgEl.id = id;
   msgEl.innerHTML = `
     <div class="avatar">${ICONS.assistant}</div>
@@ -385,8 +424,8 @@ function removeTypingIndicator(id) {
 
 // ===== ERROR =====
 function showError(message) {
-  const errEl = document.createElement("div");
-  errEl.className = "error-message";
+  const errEl = document.createElement('div');
+  errEl.className = 'error-message';
   errEl.textContent = message;
   els.messages.appendChild(errEl);
   scrollToBottom();
@@ -400,7 +439,7 @@ function scrollToBottom() {
 }
 
 function escapeHtml(text) {
-  const div = document.createElement("div");
+  const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
