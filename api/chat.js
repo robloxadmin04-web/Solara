@@ -1,9 +1,8 @@
-// ===== SOLARA AI - Backend v9 with Offline Fallback =====
-// Features:
-// - DeepSeek V3 (primary)
-// - Gemini 2.0 Flash (secondary fallback)
-// - Local hardcoded knowledge base with fuzzy matching (third fallback)
-// - Pure ASCII, no mojibake
+// ===== SOLARA AI - Backend v10 - Multi-Provider Rotation =====
+// 4-provider smart fallback + offline knowledge base
+// Order: Groq (fastest) -> Gemini -> DeepSeek Direct -> OpenRouter DeepSeek -> Offline
+// Combined free quota: ~16,000+ requests/day
+// Pure ASCII, no mojibake
 
 import crypto from 'crypto';
 
@@ -31,14 +30,11 @@ function verifyToken(token, secret) {
   }
 }
 
-// ===== HARDCODED KNOWLEDGE BASE =====
-// Used as fallback when both DeepSeek and Gemini are unavailable.
-// Each entry has keywords (for fuzzy matching) and a full answer.
-
+// ===== HARDCODED KNOWLEDGE BASE (Offline Fallback) =====
 const KNOWLEDGE_BASE = [
   {
     id: "html-doctype",
-    keywords: ["doctype","html5","declaration","starting html"],
+    keywords: ["doctype","html5","declaration","starting html","html structure"],
     title: "HTML5 Document Structure",
     answer: "The basic HTML5 document structure looks like this:\n\n\\`\\`\\`html\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>My Page</title>\n</head>\n<body>\n  <h1>Hello, world!</h1>\n</body>\n</html>\n\\`\\`\\`\n\nBreakdown:\n- **DOCTYPE html** tells the browser this is HTML5\n- **html lang=\"en\"** wraps everything, declares the language\n- **head** contains metadata (not visible on the page)\n- **meta charset** sets text encoding to UTF-8\n- **meta viewport** makes the page responsive on mobile\n- **title** is what shows on the browser tab\n- **body** contains everything visible on the page"
   },
@@ -46,276 +42,251 @@ const KNOWLEDGE_BASE = [
     id: "html-headings",
     keywords: ["heading","h1","h2","title","header text"],
     title: "HTML Headings",
-    answer: "HTML has 6 heading levels, from most important (h1) to least (h6):\n\n\\`\\`\\`html\n<h1>Main Title</h1>\n<h2>Section Title</h2>\n<h3>Subsection</h3>\n<h4>Smaller heading</h4>\n<h5>Even smaller</h5>\n<h6>Smallest heading</h6>\n\\`\\`\\`\n\nBest practices:\n- Use only ONE h1 per page (usually the main page title)\n- Do not skip levels (h1 to h3 without h2 is bad for accessibility)\n- Headings help screen readers and search engines understand your content"
-  },
-  {
-    id: "html-paragraph",
-    keywords: ["paragraph","text","p tag"],
-    title: "HTML Paragraphs and Text",
-    answer: "The paragraph tag creates blocks of text:\n\n\\`\\`\\`html\n<p>This is a paragraph of text.</p>\n<p>Each paragraph is separated by space automatically.</p>\n\\`\\`\\`\n\nFor inline formatting inside paragraphs:\n\\`\\`\\`html\n<p>\n  This is <strong>bold</strong> and this is <em>italic</em>.\n  You can also use <br> to force a line break.\n</p>\n\\`\\`\\`\n\nCommon inline tags:\n- **strong** for important text (bold)\n- **em** for emphasized text (italic)\n- **span** for generic inline containers\n- **br** for line breaks"
+    answer: "HTML has 6 heading levels:\n\n\\`\\`\\`html\n<h1>Main Title</h1>\n<h2>Section Title</h2>\n<h3>Subsection</h3>\n<h4>Smaller heading</h4>\n<h5>Even smaller</h5>\n<h6>Smallest heading</h6>\n\\`\\`\\`\n\nBest practices:\n- Use only ONE h1 per page\n- Do not skip levels (h1 to h3 without h2 is bad for accessibility)\n- Headings help screen readers and search engines"
   },
   {
     id: "html-links",
-    keywords: ["link","anchor","href","hyperlink","a tag"],
-    title: "HTML Links (Anchor Tags)",
-    answer: "Links use the anchor tag with an href attribute:\n\n\\`\\`\\`html\n<!-- Link to another page -->\n<a href=\"about.html\">About Us</a>\n\n<!-- Link to an external site -->\n<a href=\"https://google.com\">Google</a>\n\n<!-- Link that opens in a new tab -->\n<a href=\"https://google.com\" target=\"_blank\" rel=\"noopener\">Google (new tab)</a>\n\n<!-- Link to a section on the same page -->\n<a href=\"#section1\">Jump to Section 1</a>\n\\`\\`\\`\n\nAlways add **rel=\"noopener\"** when using **target=\"_blank\"** for security."
+    keywords: ["link","anchor","href","hyperlink"],
+    title: "HTML Links",
+    answer: "Links use the anchor tag:\n\n\\`\\`\\`html\n<a href=\"about.html\">About Us</a>\n<a href=\"https://google.com\" target=\"_blank\" rel=\"noopener\">Google (new tab)</a>\n<a href=\"#section1\">Jump to Section 1</a>\n\\`\\`\\`\n\nAlways add **rel=\"noopener\"** when using **target=\"_blank\"** for security."
   },
   {
     id: "html-images",
     keywords: ["image","img","picture","photo"],
     title: "HTML Images",
-    answer: "Add images with the img tag:\n\n\\`\\`\\`html\n<img src=\"photo.jpg\" alt=\"Description of the photo\" width=\"400\">\n\\`\\`\\`\n\nImportant attributes:\n- **src** is the image URL or file path (required)\n- **alt** is text shown if image fails to load (required for accessibility)\n- **width** and **height** set dimensions (optional, but helps prevent layout shift)\n\nResponsive images that resize with the container:\n\\`\\`\\`html\n<img src=\"photo.jpg\" alt=\"A sunset\" style=\"max-width: 100%; height: auto;\">\n\\`\\`\\`"
+    answer: "Add images with the img tag:\n\n\\`\\`\\`html\n<img src=\"photo.jpg\" alt=\"Description\" width=\"400\">\n\\`\\`\\`\n\n- **src** is the image URL (required)\n- **alt** is fallback text (required for accessibility)\n- **width/height** prevent layout shift\n\nResponsive images:\n\\`\\`\\`html\n<img src=\"photo.jpg\" alt=\"A sunset\" style=\"max-width: 100%; height: auto;\">\n\\`\\`\\`"
   },
   {
     id: "html-lists",
     keywords: ["list","ul","ol","li","bullet","numbered"],
     title: "HTML Lists",
-    answer: "HTML has two main list types:\n\n**Unordered list (bullets):**\n\\`\\`\\`html\n<ul>\n  <li>Apples</li>\n  <li>Bananas</li>\n  <li>Cherries</li>\n</ul>\n\\`\\`\\`\n\n**Ordered list (numbers):**\n\\`\\`\\`html\n<ol>\n  <li>First step</li>\n  <li>Second step</li>\n  <li>Third step</li>\n</ol>\n\\`\\`\\`\n\nYou can nest lists inside each other for hierarchy."
+    answer: "**Unordered list (bullets):**\n\\`\\`\\`html\n<ul>\n  <li>Apples</li>\n  <li>Bananas</li>\n</ul>\n\\`\\`\\`\n\n**Ordered list (numbers):**\n\\`\\`\\`html\n<ol>\n  <li>First step</li>\n  <li>Second step</li>\n</ol>\n\\`\\`\\`\n\nYou can nest lists for hierarchy."
   },
   {
     id: "html-forms",
-    keywords: ["form","input","submit","textbox","form field"],
+    keywords: ["form","input","submit","textbox"],
     title: "HTML Forms",
-    answer: "A basic form with common inputs:\n\n\\`\\`\\`html\n<form action=\"/submit\" method=\"POST\">\n  <label for=\"name\">Name:</label>\n  <input type=\"text\" id=\"name\" name=\"name\" required>\n\n  <label for=\"email\">Email:</label>\n  <input type=\"email\" id=\"email\" name=\"email\" required>\n\n  <label for=\"message\">Message:</label>\n  <textarea id=\"message\" name=\"message\" rows=\"4\"></textarea>\n\n  <button type=\"submit\">Send</button>\n</form>\n\\`\\`\\`\n\nCommon input types:\n- **text** - single line text\n- **email** - email address (with validation)\n- **password** - hidden text\n- **number** - numeric input\n- **checkbox** - true/false toggle\n- **radio** - one-of-many choice\n- **file** - file upload\n- **date** - date picker"
+    answer: "Basic form with common inputs:\n\n\\`\\`\\`html\n<form action=\"/submit\" method=\"POST\">\n  <label for=\"name\">Name:</label>\n  <input type=\"text\" id=\"name\" name=\"name\" required>\n\n  <label for=\"email\">Email:</label>\n  <input type=\"email\" id=\"email\" name=\"email\" required>\n\n  <textarea name=\"message\" rows=\"4\"></textarea>\n\n  <button type=\"submit\">Send</button>\n</form>\n\\`\\`\\`\n\nCommon input types: text, email, password, number, checkbox, radio, file, date"
   },
   {
     id: "html-buttons",
     keywords: ["button","click","pindutan"],
     title: "HTML Buttons",
-    answer: "Buttons are created with the button tag:\n\n\\`\\`\\`html\n<button type=\"button\">Click me</button>\n\\`\\`\\`\n\nButton types:\n- **type=\"button\"** - generic button (default for JS interactions)\n- **type=\"submit\"** - submits a form\n- **type=\"reset\"** - resets a form\n\nBasic button with a click handler:\n\\`\\`\\`html\n<button type=\"button\" onclick=\"alert('Hello!')\">Say Hello</button>\n\\`\\`\\`\n\nFor better separation of concerns, use addEventListener in JavaScript instead of onclick."
+    answer: "Buttons are created with the button tag:\n\n\\`\\`\\`html\n<button type=\"button\">Click me</button>\n<button type=\"submit\">Submit Form</button>\n<button type=\"button\" onclick=\"alert('Hi!')\">Say Hi</button>\n\\`\\`\\`\n\nFor better code, use addEventListener in JS instead of onclick."
   },
   {
     id: "html-semantic",
     keywords: ["semantic","header","nav","main","section","article","footer"],
-    title: "Semantic HTML Elements",
-    answer: "Semantic elements describe the meaning of content, not just its appearance:\n\n\\`\\`\\`html\n<body>\n  <header>\n    <h1>My Website</h1>\n    <nav>\n      <a href=\"/\">Home</a>\n      <a href=\"/about\">About</a>\n    </nav>\n  </header>\n\n  <main>\n    <article>\n      <h2>Blog Post Title</h2>\n      <p>Article content here...</p>\n    </article>\n\n    <aside>\n      <h3>Related Links</h3>\n    </aside>\n  </main>\n\n  <footer>\n    <p>&copy; 2025 My Website</p>\n  </footer>\n</body>\n\\`\\`\\`\n\nBenefits: better SEO, better accessibility for screen readers, clearer code."
+    title: "Semantic HTML",
+    answer: "Semantic elements describe meaning:\n\n\\`\\`\\`html\n<body>\n  <header>\n    <h1>My Website</h1>\n    <nav><a href=\"/\">Home</a></nav>\n  </header>\n  <main>\n    <article>\n      <h2>Post Title</h2>\n      <p>Content...</p>\n    </article>\n  </main>\n  <footer>\n    <p>Copyright 2025</p>\n  </footer>\n</body>\n\\`\\`\\`\n\nBenefits: better SEO, better accessibility, clearer code."
   },
   {
     id: "html-tables",
     keywords: ["table","tr","td","th","row","column"],
     title: "HTML Tables",
-    answer: "Tables use table, tr (row), th (header cell), and td (data cell):\n\n\\`\\`\\`html\n<table>\n  <thead>\n    <tr>\n      <th>Name</th>\n      <th>Age</th>\n      <th>City</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Alice</td>\n      <td>25</td>\n      <td>Manila</td>\n    </tr>\n    <tr>\n      <td>Bob</td>\n      <td>30</td>\n      <td>Cebu</td>\n    </tr>\n  </tbody>\n</table>\n\\`\\`\\`\n\nUse tables only for tabular data, NOT for layout. Use CSS Grid or Flexbox for layout."
-  },
-  {
-    id: "html-meta",
-    keywords: ["meta","seo","description","keywords","og","social"],
-    title: "HTML Meta Tags",
-    answer: "Meta tags go inside the head and provide info about the page:\n\n\\`\\`\\`html\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <meta name=\"description\" content=\"A short description of the page for search engines\">\n  <meta name=\"keywords\" content=\"web design, tutorial, html\">\n  <meta name=\"author\" content=\"Your Name\">\n\n  <!-- Social media preview -->\n  <meta property=\"og:title\" content=\"My Page Title\">\n  <meta property=\"og:description\" content=\"Description shown when shared on social media\">\n  <meta property=\"og:image\" content=\"https://example.com/preview.jpg\">\n</head>\n\\`\\`\\`"
+    answer: "Tables use table, tr, th, td:\n\n\\`\\`\\`html\n<table>\n  <thead>\n    <tr>\n      <th>Name</th>\n      <th>Age</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Alice</td>\n      <td>25</td>\n    </tr>\n  </tbody>\n</table>\n\\`\\`\\`\n\nUse tables only for tabular data, not layout."
   },
   {
     id: "css-selectors",
-    keywords: ["selector","class","id","target","select element"],
+    keywords: ["selector","class","id","target"],
     title: "CSS Selectors",
-    answer: "CSS selectors target HTML elements to style them:\n\n\\`\\`\\`css\n/* Element selector - all paragraphs */\np {\n  color: blue;\n}\n\n/* Class selector - elements with class=\"button\" */\n.button {\n  background: black;\n}\n\n/* ID selector - the element with id=\"header\" */\n#header {\n  height: 60px;\n}\n\n/* Descendant selector - li inside ul */\nul li {\n  list-style: none;\n}\n\n/* Multiple selectors */\nh1, h2, h3 {\n  font-family: Arial;\n}\n\n/* Pseudo-classes */\na:hover {\n  color: red;\n}\n\nbutton:disabled {\n  opacity: 0.5;\n}\n\\`\\`\\`"
+    answer: "\\`\\`\\`css\n/* Element - all paragraphs */\np { color: blue; }\n\n/* Class */\n.button { background: black; }\n\n/* ID */\n#header { height: 60px; }\n\n/* Descendant */\nul li { list-style: none; }\n\n/* Multiple */\nh1, h2, h3 { font-family: Arial; }\n\n/* Pseudo-classes */\na:hover { color: red; }\nbutton:disabled { opacity: 0.5; }\n\\`\\`\\`"
   },
   {
     id: "css-box-model",
     keywords: ["box model","margin","padding","border","width","height"],
     title: "CSS Box Model",
-    answer: "Every element is a box with content, padding, border, and margin:\n\n\\`\\`\\`css\n.box {\n  width: 300px;\n  height: 200px;\n  padding: 20px;    /* space INSIDE the border */\n  border: 2px solid black;\n  margin: 15px;     /* space OUTSIDE the border */\n}\n\\`\\`\\`\n\n**box-sizing** controls how width/height are calculated:\n\\`\\`\\`css\n/* Default: width = content only */\n.default-box {\n  box-sizing: content-box;\n  width: 300px; /* total = 300 + padding + border */\n}\n\n/* Better: width includes padding and border */\n.modern-box {\n  box-sizing: border-box;\n  width: 300px; /* total = exactly 300 */\n}\n\n/* Apply border-box to everything (recommended) */\n* {\n  box-sizing: border-box;\n}\n\\`\\`\\`"
+    answer: "Every element is a box:\n\n\\`\\`\\`css\n.box {\n  width: 300px;\n  padding: 20px;   /* space INSIDE the border */\n  border: 2px solid black;\n  margin: 15px;    /* space OUTSIDE the border */\n}\n\\`\\`\\`\n\nRecommended - use border-box everywhere:\n\\`\\`\\`css\n* {\n  box-sizing: border-box;\n}\n\\`\\`\\`\n\nWith border-box, width includes padding and border - much easier to reason about."
   },
   {
     id: "css-flexbox-center",
-    keywords: ["center","flexbox","flex","centering","align center"],
+    keywords: ["center","flexbox","flex","centering"],
     title: "Center Anything with Flexbox",
-    answer: "The easiest way to center content in modern CSS:\n\n\\`\\`\\`css\n.container {\n  display: flex;\n  justify-content: center;  /* horizontal center */\n  align-items: center;      /* vertical center */\n  min-height: 100vh;        /* full screen height */\n}\n\\`\\`\\`\n\nExample HTML:\n\\`\\`\\`html\n<div class=\"container\">\n  <div class=\"box\">I am centered!</div>\n</div>\n\\`\\`\\`\n\nKey flex properties:\n- **display: flex** - turns the container into a flex container\n- **justify-content** - aligns items on the main axis (default: horizontal)\n- **align-items** - aligns items on the cross axis (default: vertical)"
+    answer: "Easiest way to center content:\n\n\\`\\`\\`css\n.container {\n  display: flex;\n  justify-content: center;  /* horizontal */\n  align-items: center;      /* vertical */\n  min-height: 100vh;\n}\n\\`\\`\\`\n\n\\`\\`\\`html\n<div class=\"container\">\n  <div>I am centered!</div>\n</div>\n\\`\\`\\`"
   },
   {
-    id: "css-flexbox-full",
-    keywords: ["flexbox","flex","flex-direction","flex-wrap","gap","layout"],
-    title: "CSS Flexbox Complete Guide",
-    answer: "Flexbox is a 1-dimensional layout system for rows or columns:\n\n\\`\\`\\`css\n.container {\n  display: flex;\n  flex-direction: row;         /* row | row-reverse | column | column-reverse */\n  justify-content: space-between; /* start | end | center | space-between | space-around | space-evenly */\n  align-items: center;         /* start | end | center | stretch | baseline */\n  flex-wrap: wrap;             /* nowrap | wrap | wrap-reverse */\n  gap: 20px;                   /* space between items */\n}\n\n.item {\n  flex: 1;              /* grow to fill available space */\n  flex-basis: 200px;    /* starting size */\n  flex-shrink: 0;       /* prevent shrinking */\n}\n\\`\\`\\`\n\nCommon patterns:\n- Navigation bar: **display: flex; justify-content: space-between;**\n- Equal-width columns: use **flex: 1** on each item\n- Card grid that wraps: **flex-wrap: wrap; gap: 20px;**"
+    id: "css-flexbox",
+    keywords: ["flexbox","flex","flex-direction","gap","layout"],
+    title: "CSS Flexbox Guide",
+    answer: "Flexbox is 1D layout (rows or columns):\n\n\\`\\`\\`css\n.container {\n  display: flex;\n  flex-direction: row;         /* row | column */\n  justify-content: space-between;\n  align-items: center;\n  flex-wrap: wrap;\n  gap: 20px;\n}\n\n.item {\n  flex: 1;              /* fill available space */\n}\n\\`\\`\\`\n\nCommon patterns:\n- Nav bar: **justify-content: space-between**\n- Equal columns: **flex: 1** on items\n- Card grid: **flex-wrap: wrap; gap: 20px**"
   },
   {
     id: "css-grid",
-    keywords: ["grid","css grid","grid-template","columns","rows"],
+    keywords: ["grid","css grid","grid-template","columns"],
     title: "CSS Grid Basics",
-    answer: "CSS Grid is a 2-dimensional layout system for rows AND columns:\n\n\\`\\`\\`css\n.grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr 1fr;  /* 3 equal columns */\n  grid-template-rows: auto;\n  gap: 20px;\n}\n\\`\\`\\`\n\nCommon patterns:\n\n**Responsive card grid (auto-fit):**\n\\`\\`\\`css\n.cards {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n  gap: 20px;\n}\n\\`\\`\\`\n\n**Full page layout:**\n\\`\\`\\`css\n.page {\n  display: grid;\n  grid-template-columns: 250px 1fr;\n  grid-template-rows: 60px 1fr 40px;\n  min-height: 100vh;\n}\n\\`\\`\\`\n\nGrid vs Flexbox: use Grid for 2D layouts (rows + columns), Flexbox for 1D (single row or column)."
+    answer: "Grid is 2D layout (rows AND columns):\n\n\\`\\`\\`css\n.grid {\n  display: grid;\n  grid-template-columns: 1fr 1fr 1fr;\n  gap: 20px;\n}\n\\`\\`\\`\n\nResponsive cards:\n\\`\\`\\`css\n.cards {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n  gap: 20px;\n}\n\\`\\`\\`\n\nGrid vs Flexbox: Grid for 2D (rows+cols), Flex for 1D (single row or col)."
   },
   {
     id: "css-position",
     keywords: ["position","absolute","relative","fixed","sticky","z-index"],
     title: "CSS Positioning",
-    answer: "Position controls how an element is placed on the page:\n\n\\`\\`\\`css\n/* Default - normal document flow */\n.static {\n  position: static;\n}\n\n/* Relative to its normal position */\n.relative {\n  position: relative;\n  top: 10px;      /* moves down 10px from normal spot */\n  left: 20px;\n}\n\n/* Absolute - relative to nearest positioned ancestor */\n.absolute {\n  position: absolute;\n  top: 0;\n  right: 0;       /* stuck to top-right corner */\n}\n\n/* Fixed - relative to viewport (does not scroll) */\n.fixed {\n  position: fixed;\n  bottom: 20px;\n  right: 20px;    /* floating action button */\n}\n\n/* Sticky - normal until scrolled to threshold */\n.sticky {\n  position: sticky;\n  top: 0;         /* sticks to top when scrolled past */\n}\n\n/* z-index controls stacking order (higher = on top) */\n.overlay {\n  position: fixed;\n  z-index: 100;\n}\n\\`\\`\\`"
+    answer: "\\`\\`\\`css\n.relative {\n  position: relative;\n  top: 10px;      /* offsets from normal spot */\n}\n\n.absolute {\n  position: absolute;\n  top: 0;\n  right: 0;       /* relative to nearest positioned ancestor */\n}\n\n.fixed {\n  position: fixed;\n  bottom: 20px;   /* stays in viewport when scrolling */\n}\n\n.sticky {\n  position: sticky;\n  top: 0;         /* sticks when scrolled past */\n}\n\n.overlay {\n  z-index: 100;   /* higher = on top */\n}\n\\`\\`\\`"
   },
   {
     id: "css-colors",
-    keywords: ["color","background","rgb","hex","hsl","gradient"],
+    keywords: ["color","background","rgb","hex","gradient"],
     title: "CSS Colors and Backgrounds",
-    answer: "Colors can be written in several formats:\n\n\\`\\`\\`css\n.example {\n  /* Named colors */\n  color: red;\n\n  /* Hex codes */\n  color: #ff0000;\n  color: #f00;       /* shorthand */\n\n  /* RGB */\n  color: rgb(255, 0, 0);\n  color: rgba(255, 0, 0, 0.5);  /* with transparency */\n\n  /* HSL (hue, saturation, lightness) */\n  color: hsl(0, 100%, 50%);\n  color: hsla(0, 100%, 50%, 0.5);\n}\n\\`\\`\\`\n\nBackgrounds:\n\\`\\`\\`css\n.hero {\n  background-color: #333;\n  background-image: url('bg.jpg');\n  background-size: cover;\n  background-position: center;\n  background-repeat: no-repeat;\n\n  /* Gradients */\n  background: linear-gradient(to right, red, blue);\n  background: radial-gradient(circle, yellow, red);\n}\n\\`\\`\\`"
+    answer: "\\`\\`\\`css\n.example {\n  color: red;\n  color: #ff0000;\n  color: rgb(255, 0, 0);\n  color: rgba(255, 0, 0, 0.5);   /* transparency */\n  color: hsl(0, 100%, 50%);\n}\n\n.hero {\n  background-image: url('bg.jpg');\n  background-size: cover;\n  background-position: center;\n  background: linear-gradient(to right, red, blue);\n}\n\\`\\`\\`"
   },
   {
     id: "css-typography",
-    keywords: ["font","text","typography","font-family","font-size","font-weight"],
+    keywords: ["font","text","typography","font-size"],
     title: "CSS Typography",
-    answer: "Style text with these common properties:\n\n\\`\\`\\`css\nbody {\n  font-family: 'Inter', Arial, sans-serif;  /* fallback fonts */\n  font-size: 16px;\n  font-weight: 400;         /* 100-900, or 'normal', 'bold' */\n  line-height: 1.5;         /* spacing between lines */\n  color: #333;\n  letter-spacing: 0.02em;   /* space between letters */\n  text-align: left;         /* left | center | right | justify */\n}\n\n.heading {\n  font-size: 2rem;          /* 2x the root font size */\n  text-transform: uppercase;\n  text-decoration: underline;\n}\n\n.emphasized {\n  font-style: italic;\n  text-decoration: none;    /* remove underline from links */\n}\n\\`\\`\\`\n\nLoading Google Fonts:\n\\`\\`\\`html\n<link href=\"https://fonts.googleapis.com/css2?family=Inter&display=swap\" rel=\"stylesheet\">\n\\`\\`\\`"
+    answer: "\\`\\`\\`css\nbody {\n  font-family: 'Inter', Arial, sans-serif;\n  font-size: 16px;\n  font-weight: 400;\n  line-height: 1.5;\n  color: #333;\n  text-align: left;\n}\n\n.heading {\n  font-size: 2rem;\n  text-transform: uppercase;\n}\n\n.link {\n  text-decoration: none;   /* remove underline */\n}\n\\`\\`\\`\n\nLoad Google Fonts:\n\\`\\`\\`html\n<link href=\"https://fonts.googleapis.com/css2?family=Inter&display=swap\" rel=\"stylesheet\">\n\\`\\`\\`"
   },
   {
     id: "css-transitions",
-    keywords: ["transition","animation","hover","smooth","ease"],
+    keywords: ["transition","animation","hover","smooth"],
     title: "CSS Transitions and Animations",
-    answer: "**Transitions** smoothly animate property changes:\n\n\\`\\`\\`css\n.button {\n  background: blue;\n  transition: background 0.3s ease;  /* animate background over 0.3s */\n}\n\n.button:hover {\n  background: red;\n}\n\n/* Animate multiple properties */\n.card {\n  transition: transform 0.3s ease, box-shadow 0.3s ease;\n}\n\n.card:hover {\n  transform: scale(1.05) translateY(-5px);\n  box-shadow: 0 10px 30px rgba(0,0,0,0.2);\n}\n\\`\\`\\`\n\n**Animations** with @keyframes:\n\\`\\`\\`css\n@keyframes fadeIn {\n  from { opacity: 0; transform: translateY(20px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n.fade-in {\n  animation: fadeIn 0.5s ease forwards;\n}\n\\`\\`\\`"
+    answer: "**Transitions** animate property changes:\n\n\\`\\`\\`css\n.button {\n  background: blue;\n  transition: background 0.3s ease;\n}\n\n.button:hover {\n  background: red;\n}\n\n.card {\n  transition: transform 0.3s ease, box-shadow 0.3s ease;\n}\n\n.card:hover {\n  transform: scale(1.05) translateY(-5px);\n  box-shadow: 0 10px 30px rgba(0,0,0,0.2);\n}\n\\`\\`\\`\n\n**Keyframe animations:**\n\\`\\`\\`css\n@keyframes fadeIn {\n  from { opacity: 0; transform: translateY(20px); }\n  to { opacity: 1; transform: translateY(0); }\n}\n\n.fade-in {\n  animation: fadeIn 0.5s ease forwards;\n}\n\\`\\`\\`"
   },
   {
     id: "css-responsive",
-    keywords: ["responsive","media query","mobile","breakpoint","tablet"],
+    keywords: ["responsive","media query","mobile","breakpoint"],
     title: "CSS Responsive Design",
-    answer: "Media queries apply CSS based on screen size:\n\n\\`\\`\\`css\n/* Mobile-first approach - default styles for mobile */\n.container {\n  padding: 20px;\n  font-size: 14px;\n}\n\n/* Tablets and up */\n@media (min-width: 768px) {\n  .container {\n    padding: 40px;\n    font-size: 16px;\n  }\n}\n\n/* Desktops and up */\n@media (min-width: 1024px) {\n  .container {\n    padding: 60px;\n    max-width: 1200px;\n    margin: 0 auto;\n  }\n}\n\\`\\`\\`\n\nStandard breakpoints:\n- Mobile: up to 767px\n- Tablet: 768px to 1023px\n- Desktop: 1024px and up\n\nAlso add the viewport meta tag in your HTML:\n\\`\\`\\`html\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\\`\\`\\`"
+    answer: "Media queries adapt to screen size:\n\n\\`\\`\\`css\n/* Mobile-first defaults */\n.container {\n  padding: 20px;\n  font-size: 14px;\n}\n\n@media (min-width: 768px) {\n  .container {\n    padding: 40px;\n    font-size: 16px;\n  }\n}\n\n@media (min-width: 1024px) {\n  .container {\n    max-width: 1200px;\n    margin: 0 auto;\n  }\n}\n\\`\\`\\`\n\nAdd viewport meta tag:\n\\`\\`\\`html\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\\`\\`\\`"
   },
   {
     id: "css-shadow",
-    keywords: ["shadow","box-shadow","text-shadow","drop shadow"],
+    keywords: ["shadow","box-shadow","text-shadow"],
     title: "CSS Shadows",
-    answer: "Add depth with shadows:\n\n\\`\\`\\`css\n/* Box shadow - offset-x offset-y blur spread color */\n.card {\n  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n}\n\n/* Layered shadows for realistic depth */\n.floating {\n  box-shadow:\n    0 1px 3px rgba(0,0,0,0.12),\n    0 1px 2px rgba(0,0,0,0.24);\n}\n\n/* Inset shadow (inside the element) */\n.pressed {\n  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);\n}\n\n/* Text shadow */\n.hero-text {\n  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);\n}\n\\`\\`\\`"
+    answer: "\\`\\`\\`css\n/* box-shadow: offset-x offset-y blur color */\n.card {\n  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n}\n\n/* Layered for realism */\n.floating {\n  box-shadow:\n    0 1px 3px rgba(0,0,0,0.12),\n    0 1px 2px rgba(0,0,0,0.24);\n}\n\n/* Inset (inside) */\n.pressed {\n  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);\n}\n\n/* Text shadow */\n.hero-text {\n  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);\n}\n\\`\\`\\`"
   },
   {
     id: "css-variables",
-    keywords: ["variable","custom property","var","--"],
-    title: "CSS Custom Properties (Variables)",
-    answer: "Store reusable values in CSS variables:\n\n\\`\\`\\`css\n/* Define at :root for global scope */\n:root {\n  --primary-color: #3498db;\n  --text-color: #333;\n  --spacing: 16px;\n  --border-radius: 8px;\n}\n\n/* Use them anywhere */\n.button {\n  background: var(--primary-color);\n  padding: var(--spacing);\n  border-radius: var(--border-radius);\n}\n\n.card {\n  color: var(--text-color);\n  margin: var(--spacing);\n}\n\\`\\`\\`\n\nGreat for theming - change one variable to update your whole design."
+    keywords: ["variable","custom property","var"],
+    title: "CSS Variables",
+    answer: "Reusable values with CSS variables:\n\n\\`\\`\\`css\n:root {\n  --primary: #3498db;\n  --text: #333;\n  --spacing: 16px;\n  --radius: 8px;\n}\n\n.button {\n  background: var(--primary);\n  padding: var(--spacing);\n  border-radius: var(--radius);\n}\n\n.card {\n  color: var(--text);\n  margin: var(--spacing);\n}\n\\`\\`\\`\n\nChange one variable, update your whole design. Great for theming."
   },
   {
     id: "js-variables",
     keywords: ["variable","var","let","const","declare"],
-    title: "JavaScript Variables (var, let, const)",
-    answer: "Three ways to declare variables in JavaScript:\n\n\\`\\`\\`js\n// const - value cannot be reassigned (USE THIS BY DEFAULT)\nconst name = 'Alice';\nconst PI = 3.14;\n\n// let - value can change\nlet count = 0;\ncount = count + 1;\n\n// var - old-style, avoid in modern JS\nvar oldStyle = 'do not use';\n\\`\\`\\`\n\n**Rules:**\n- Use **const** by default\n- Use **let** only when you need to reassign\n- Avoid **var** - it has confusing scoping rules\n\n**Note:** const prevents reassignment, but you can still modify contents of objects and arrays:\n\\`\\`\\`js\nconst list = [1, 2, 3];\nlist.push(4);    // OK - modifying, not reassigning\n// list = [];    // ERROR - reassigning const\n\\`\\`\\`"
-  },
-  {
-    id: "js-data-types",
-    keywords: ["data type","string","number","boolean","null","undefined","typeof"],
-    title: "JavaScript Data Types",
-    answer: "JavaScript has these primitive types:\n\n\\`\\`\\`js\n// String - text\nconst name = 'Alice';\nconst greeting = \"Hello\";\nconst template = \\`Hello, \\${name}!\\`;  // template literal\n\n// Number - any number (no separate int/float)\nconst age = 25;\nconst price = 9.99;\n\n// Boolean - true or false\nconst isActive = true;\n\n// Null - intentional absence of value\nconst empty = null;\n\n// Undefined - variable declared but not assigned\nlet notYet;\n\n// Check the type\nconsole.log(typeof name);    // 'string'\nconsole.log(typeof age);     // 'number'\nconsole.log(typeof isActive); // 'boolean'\n\\`\\`\\`\n\nComplex types: **Object**, **Array**, **Function** (all technically objects)."
+    title: "JavaScript Variables",
+    answer: "Three ways to declare variables:\n\n\\`\\`\\`js\n// const - value cannot be reassigned (USE THIS BY DEFAULT)\nconst name = 'Alice';\n\n// let - value can change\nlet count = 0;\ncount = count + 1;\n\n// var - old-style, avoid\nvar oldStyle = 'do not use';\n\\`\\`\\`\n\nRules:\n- Use **const** by default\n- Use **let** only when reassigning\n- Avoid **var**\n\nNote: const prevents reassignment, but object contents can still change:\n\\`\\`\\`js\nconst list = [1, 2, 3];\nlist.push(4);    // OK\n// list = [];    // ERROR\n\\`\\`\\`"
   },
   {
     id: "js-strings",
-    keywords: ["string","text","concatenation","template literal"],
+    keywords: ["string","text","template literal"],
     title: "JavaScript Strings",
-    answer: "Working with strings:\n\n\\`\\`\\`js\nconst first = 'Alice';\nconst last = 'Smith';\n\n// Concatenation with +\nconst full1 = first + ' ' + last;\n\n// Template literals (recommended)\nconst full2 = \\`\\${first} \\${last}\\`;\n\n// Common methods\nconst text = 'Hello, World!';\ntext.length;                  // 13\ntext.toUpperCase();           // 'HELLO, WORLD!'\ntext.toLowerCase();           // 'hello, world!'\ntext.includes('World');       // true\ntext.indexOf('World');        // 7\ntext.replace('World', 'JS');  // 'Hello, JS!'\ntext.slice(0, 5);             // 'Hello'\ntext.split(', ');             // ['Hello', 'World!']\ntext.trim();                  // removes whitespace\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst first = 'Alice';\nconst last = 'Smith';\n\n// Template literals (recommended)\nconst full = \\`\\${first} \\${last}\\`;\n\n// Common methods\nconst text = 'Hello, World!';\ntext.length;                  // 13\ntext.toUpperCase();           // 'HELLO, WORLD!'\ntext.includes('World');       // true\ntext.replace('World', 'JS');  // 'Hello, JS!'\ntext.slice(0, 5);             // 'Hello'\ntext.split(', ');             // ['Hello', 'World!']\ntext.trim();                  // removes whitespace\n\\`\\`\\`"
   },
   {
     id: "js-conditionals",
     keywords: ["if","else","condition","ternary","switch"],
     title: "JavaScript Conditionals",
-    answer: "Make decisions in your code:\n\n\\`\\`\\`js\n// if / else if / else\nconst age = 20;\n\nif (age >= 18) {\n  console.log('Adult');\n} else if (age >= 13) {\n  console.log('Teenager');\n} else {\n  console.log('Child');\n}\n\n// Ternary operator (short if/else)\nconst message = age >= 18 ? 'Adult' : 'Minor';\n\n// Switch statement\nconst day = 'Monday';\nswitch (day) {\n  case 'Monday':\n    console.log('Start of week');\n    break;\n  case 'Friday':\n    console.log('Almost weekend');\n    break;\n  default:\n    console.log('Regular day');\n}\n\\`\\`\\`\n\nComparison operators:\n- **===** strict equal (use this)\n- **!==** strict not equal\n- **>** **<** **>=** **<=**\n- **&&** and, **||** or, **!** not"
+    answer: "\\`\\`\\`js\n// if / else if / else\nif (age >= 18) {\n  console.log('Adult');\n} else if (age >= 13) {\n  console.log('Teenager');\n} else {\n  console.log('Child');\n}\n\n// Ternary (short if/else)\nconst message = age >= 18 ? 'Adult' : 'Minor';\n\n// Switch\nswitch (day) {\n  case 'Monday':\n    console.log('Start of week');\n    break;\n  default:\n    console.log('Other day');\n}\n\\`\\`\\`\n\nComparison: === (strict equal), !==, >, <, >=, <=\nLogic: && (and), || (or), ! (not)"
   },
   {
     id: "js-loops",
     keywords: ["loop","for","while","iterate","foreach"],
     title: "JavaScript Loops",
-    answer: "Repeat code with loops:\n\n\\`\\`\\`js\n// Classic for loop\nfor (let i = 0; i < 5; i++) {\n  console.log(i);  // 0, 1, 2, 3, 4\n}\n\n// While loop\nlet count = 0;\nwhile (count < 3) {\n  console.log(count);\n  count++;\n}\n\n// For...of - loop through array values\nconst fruits = ['apple', 'banana', 'cherry'];\nfor (const fruit of fruits) {\n  console.log(fruit);\n}\n\n// forEach - array method\nfruits.forEach((fruit, index) => {\n  console.log(index, fruit);\n});\n\n// For...in - loop through object keys\nconst person = { name: 'Alice', age: 25 };\nfor (const key in person) {\n  console.log(key, person[key]);\n}\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\n// Classic for\nfor (let i = 0; i < 5; i++) {\n  console.log(i);\n}\n\n// While\nlet count = 0;\nwhile (count < 3) {\n  console.log(count);\n  count++;\n}\n\n// For...of - array values\nconst fruits = ['apple', 'banana'];\nfor (const fruit of fruits) {\n  console.log(fruit);\n}\n\n// forEach - array method\nfruits.forEach((fruit, index) => {\n  console.log(index, fruit);\n});\n\\`\\`\\`"
   },
   {
     id: "js-functions",
-    keywords: ["function","arrow function","return","parameter","argument"],
+    keywords: ["function","arrow function","return","parameter"],
     title: "JavaScript Functions",
-    answer: "Functions are reusable blocks of code:\n\n\\`\\`\\`js\n// Function declaration\nfunction greet(name) {\n  return 'Hello, ' + name;\n}\n\n// Function expression\nconst greet2 = function(name) {\n  return 'Hello, ' + name;\n};\n\n// Arrow function (modern, recommended for short functions)\nconst greet3 = (name) => 'Hello, ' + name;\n\n// Arrow function with multiple lines\nconst greet4 = (name) => {\n  const message = 'Hello, ' + name;\n  return message;\n};\n\n// Default parameters\nfunction greet5(name = 'friend') {\n  return 'Hello, ' + name;\n}\n\n// Multiple parameters\nconst add = (a, b) => a + b;\nadd(2, 3);  // 5\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\n// Function declaration\nfunction greet(name) {\n  return 'Hello, ' + name;\n}\n\n// Arrow function (modern)\nconst greet2 = (name) => 'Hello, ' + name;\n\n// Multi-line arrow\nconst greet3 = (name) => {\n  const msg = 'Hello, ' + name;\n  return msg;\n};\n\n// Default parameters\nfunction greet4(name = 'friend') {\n  return 'Hello, ' + name;\n}\n\n// Multiple params\nconst add = (a, b) => a + b;\nadd(2, 3);  // 5\n\\`\\`\\`"
   },
   {
     id: "js-arrays",
-    keywords: ["array","list","push","pop","map","filter","find"],
+    keywords: ["array","list","push","map","filter"],
     title: "JavaScript Arrays",
-    answer: "Arrays hold ordered lists of values:\n\n\\`\\`\\`js\nconst fruits = ['apple', 'banana', 'cherry'];\n\n// Access items (zero-indexed)\nfruits[0];              // 'apple'\nfruits.length;          // 3\n\n// Add and remove\nfruits.push('date');    // adds to end\nfruits.pop();           // removes from end\nfruits.unshift('kiwi'); // adds to start\nfruits.shift();         // removes from start\n\n// Find and check\nfruits.includes('apple');       // true\nfruits.indexOf('banana');       // 1\nfruits.find(f => f === 'apple'); // 'apple'\n\n// Transform (returns NEW array)\nconst nums = [1, 2, 3, 4];\nnums.map(n => n * 2);           // [2, 4, 6, 8]\nnums.filter(n => n > 2);        // [3, 4]\nnums.reduce((sum, n) => sum + n, 0); // 10\n\n// Loop through\nnums.forEach(n => console.log(n));\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst fruits = ['apple', 'banana', 'cherry'];\n\nfruits[0];              // 'apple'\nfruits.length;          // 3\n\n// Add/remove\nfruits.push('date');    // add to end\nfruits.pop();           // remove from end\nfruits.unshift('kiwi'); // add to start\n\n// Find and check\nfruits.includes('apple');       // true\nfruits.indexOf('banana');       // 1\n\n// Transform (returns NEW array)\nconst nums = [1, 2, 3, 4];\nnums.map(n => n * 2);           // [2, 4, 6, 8]\nnums.filter(n => n > 2);        // [3, 4]\nnums.reduce((sum, n) => sum + n, 0); // 10\n\\`\\`\\`"
   },
   {
     id: "js-objects",
     keywords: ["object","key","property","destructuring"],
     title: "JavaScript Objects",
-    answer: "Objects store data as key-value pairs:\n\n\\`\\`\\`js\n// Create an object\nconst person = {\n  name: 'Alice',\n  age: 25,\n  city: 'Manila',\n  greet: function() {\n    return 'Hi, I am ' + this.name;\n  }\n};\n\n// Access properties\nperson.name;           // 'Alice'\nperson['name'];        // 'Alice' (bracket notation)\n\n// Modify\nperson.age = 26;\nperson.email = 'alice@example.com';  // add new property\n\n// Delete\ndelete person.city;\n\n// Destructuring - extract properties into variables\nconst { name, age } = person;\nconsole.log(name);  // 'Alice'\n\n// Rename with destructuring\nconst { name: userName } = person;\n\n// Spread operator - copy or merge\nconst clone = { ...person };\nconst updated = { ...person, age: 30 };\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst person = {\n  name: 'Alice',\n  age: 25,\n  greet() {\n    return 'Hi, I am ' + this.name;\n  }\n};\n\n// Access\nperson.name;           // 'Alice'\nperson['name'];        // 'Alice'\n\n// Modify\nperson.age = 26;\nperson.email = 'alice@example.com';\n\n// Destructuring\nconst { name, age } = person;\n\n// Spread - copy or merge\nconst clone = { ...person };\nconst updated = { ...person, age: 30 };\n\\`\\`\\`"
   },
   {
     id: "js-dom-select",
-    keywords: ["dom","queryselector","getelementbyid","select element"],
+    keywords: ["dom","queryselector","getelementbyid","select"],
     title: "JavaScript DOM Selection",
-    answer: "Access HTML elements from JavaScript:\n\n\\`\\`\\`js\n// Modern methods (use these)\ndocument.querySelector('#header');      // by ID (returns 1)\ndocument.querySelector('.button');      // by class\ndocument.querySelector('p');            // by tag\ndocument.querySelectorAll('.item');     // returns ALL matches (NodeList)\n\n// Older methods (still work)\ndocument.getElementById('header');\ndocument.getElementsByClassName('button');\ndocument.getElementsByTagName('p');\n\n// Loop through multiple elements\nconst items = document.querySelectorAll('.item');\nitems.forEach(item => {\n  console.log(item.textContent);\n});\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\n// Modern (use these)\ndocument.querySelector('#header');      // by ID\ndocument.querySelector('.button');      // by class\ndocument.querySelector('p');            // by tag\ndocument.querySelectorAll('.item');     // ALL matches\n\n// Loop through multiple\nconst items = document.querySelectorAll('.item');\nitems.forEach(item => {\n  console.log(item.textContent);\n});\n\\`\\`\\`"
   },
   {
     id: "js-dom-modify",
-    keywords: ["dom","innerhtml","textcontent","classlist","setattribute","modify"],
+    keywords: ["dom","innerhtml","textcontent","classlist","modify"],
     title: "JavaScript DOM Manipulation",
-    answer: "Change elements after selecting them:\n\n\\`\\`\\`js\nconst el = document.querySelector('#myDiv');\n\n// Text content (safest for user data)\nel.textContent = 'New text';\n\n// HTML content (careful - can be XSS risk)\nel.innerHTML = '<strong>Bold text</strong>';\n\n// Attributes\nel.setAttribute('data-id', '123');\nel.getAttribute('href');\nel.removeAttribute('disabled');\n\n// Classes\nel.classList.add('active');\nel.classList.remove('hidden');\nel.classList.toggle('open');\nel.classList.contains('active');  // true/false\n\n// Styles (inline - avoid if possible, use CSS classes)\nel.style.color = 'red';\nel.style.backgroundColor = 'yellow';\n\n// Create new elements\nconst newDiv = document.createElement('div');\nnewDiv.textContent = 'Hello';\nnewDiv.className = 'greeting';\ndocument.body.appendChild(newDiv);\n\n// Remove\nel.remove();\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst el = document.querySelector('#myDiv');\n\n// Text\nel.textContent = 'New text';     // safe\nel.innerHTML = '<strong>Bold</strong>';  // careful - XSS risk\n\n// Attributes\nel.setAttribute('data-id', '123');\nel.removeAttribute('disabled');\n\n// Classes\nel.classList.add('active');\nel.classList.remove('hidden');\nel.classList.toggle('open');\nel.classList.contains('active');\n\n// Create elements\nconst div = document.createElement('div');\ndiv.textContent = 'Hello';\ndocument.body.appendChild(div);\n\n// Remove\nel.remove();\n\\`\\`\\`"
   },
   {
     id: "js-events",
-    keywords: ["event","click","addeventlistener","onclick","listener"],
+    keywords: ["event","click","addeventlistener","listener"],
     title: "JavaScript Events",
-    answer: "Respond to user actions with events:\n\n\\`\\`\\`js\nconst button = document.querySelector('#myBtn');\n\n// Add event listener (recommended)\nbutton.addEventListener('click', function() {\n  console.log('Button was clicked!');\n});\n\n// With arrow function\nbutton.addEventListener('click', () => {\n  console.log('Clicked!');\n});\n\n// Access event details\nbutton.addEventListener('click', (event) => {\n  console.log(event.target);       // the clicked element\n  event.preventDefault();          // stop default behavior\n  event.stopPropagation();         // stop bubbling\n});\n\n// Common events:\n// click, dblclick, mousedown, mouseup, mouseover, mouseout\n// keydown, keyup, keypress\n// submit, change, input, focus, blur\n// load, DOMContentLoaded, resize, scroll\n\n// Form submit\ndocument.querySelector('form').addEventListener('submit', (e) => {\n  e.preventDefault();  // stop page reload\n  const input = document.querySelector('input').value;\n  console.log(input);\n});\n\n// Keyboard\ndocument.addEventListener('keydown', (e) => {\n  if (e.key === 'Enter') {\n    console.log('Enter pressed');\n  }\n});\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst button = document.querySelector('#myBtn');\n\nbutton.addEventListener('click', () => {\n  console.log('Clicked!');\n});\n\n// With event details\nbutton.addEventListener('click', (event) => {\n  console.log(event.target);\n  event.preventDefault();\n});\n\n// Form submit\ndocument.querySelector('form').addEventListener('submit', (e) => {\n  e.preventDefault();  // stop page reload\n});\n\n// Keyboard\ndocument.addEventListener('keydown', (e) => {\n  if (e.key === 'Enter') console.log('Enter pressed');\n});\n\\`\\`\\`\n\nCommon events: click, submit, input, change, keydown, load, scroll"
   },
   {
     id: "js-fetch",
     keywords: ["fetch","api","ajax","http","request","json"],
     title: "JavaScript Fetch API",
-    answer: "Make HTTP requests to APIs:\n\n\\`\\`\\`js\n// Basic GET request\nfetch('https://api.example.com/users')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error('Error:', error));\n\n// Modern async/await syntax (recommended)\nasync function getUsers() {\n  try {\n    const response = await fetch('https://api.example.com/users');\n    if (!response.ok) throw new Error('Request failed');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n\n// POST request with body\nasync function createUser(userData) {\n  const response = await fetch('https://api.example.com/users', {\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n    },\n    body: JSON.stringify(userData),\n  });\n  return response.json();\n}\n\ncreateUser({ name: 'Alice', email: 'alice@example.com' });\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\n// Modern async/await (recommended)\nasync function getUsers() {\n  try {\n    const response = await fetch('/api/users');\n    if (!response.ok) throw new Error('Failed');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error(error);\n  }\n}\n\n// POST with body\nasync function createUser(userData) {\n  const response = await fetch('/api/users', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify(userData),\n  });\n  return response.json();\n}\n\\`\\`\\`"
   },
   {
     id: "js-localstorage",
-    keywords: ["localstorage","storage","save","persist","browser storage"],
+    keywords: ["localstorage","storage","save","persist"],
     title: "JavaScript localStorage",
-    answer: "Save data in the browser that persists across page loads:\n\n\\`\\`\\`js\n// Save a value (strings only)\nlocalStorage.setItem('username', 'Alice');\nlocalStorage.setItem('theme', 'dark');\n\n// Retrieve a value\nconst username = localStorage.getItem('username');  // 'Alice'\nconst missing = localStorage.getItem('notThere');   // null\n\n// Save objects/arrays - convert to JSON first\nconst user = { name: 'Alice', age: 25 };\nlocalStorage.setItem('user', JSON.stringify(user));\n\n// Retrieve and parse back\nconst savedUser = JSON.parse(localStorage.getItem('user'));\n\n// Remove one item\nlocalStorage.removeItem('username');\n\n// Clear everything\nlocalStorage.clear();\n\\`\\`\\`\n\nLimits: ~5MB per domain. Data is stored per-domain and persists until manually cleared.\n\n**sessionStorage** works the same but is cleared when the tab closes."
+    answer: "Save data that persists across page loads:\n\n\\`\\`\\`js\n// Strings only\nlocalStorage.setItem('username', 'Alice');\nconst name = localStorage.getItem('username');\n\n// Objects - convert to JSON\nconst user = { name: 'Alice', age: 25 };\nlocalStorage.setItem('user', JSON.stringify(user));\nconst saved = JSON.parse(localStorage.getItem('user'));\n\nlocalStorage.removeItem('username');\nlocalStorage.clear();\n\\`\\`\\`\n\nLimit: ~5MB per domain. Persists until manually cleared.\n\n**sessionStorage** works the same but clears on tab close."
   },
   {
     id: "js-async",
-    keywords: ["async","await","promise","asynchronous","then"],
-    title: "JavaScript Async / Await",
-    answer: "Handle asynchronous operations cleanly:\n\n\\`\\`\\`js\n// Promises with .then (older style)\nfetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error(error));\n\n// Async/await (modern, cleaner)\nasync function loadData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error(error);\n  }\n}\n\nloadData();\n\n// Multiple async operations in parallel\nasync function loadMultiple() {\n  const [users, posts] = await Promise.all([\n    fetch('/api/users').then(r => r.json()),\n    fetch('/api/posts').then(r => r.json()),\n  ]);\n  console.log(users, posts);\n}\n\\`\\`\\`\n\nRules:\n- **await** only works inside **async** functions\n- **async** functions always return a Promise\n- Use **try/catch** to handle errors"
+    keywords: ["async","await","promise","asynchronous"],
+    title: "JavaScript Async/Await",
+    answer: "\\`\\`\\`js\n// Modern syntax (cleaner)\nasync function loadData() {\n  try {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    console.log(data);\n  } catch (error) {\n    console.error(error);\n  }\n}\n\n// Multiple in parallel\nasync function loadMultiple() {\n  const [users, posts] = await Promise.all([\n    fetch('/api/users').then(r => r.json()),\n    fetch('/api/posts').then(r => r.json()),\n  ]);\n}\n\\`\\`\\`\n\nRules:\n- await only works inside async functions\n- async functions always return a Promise\n- Use try/catch for errors"
   },
   {
-    id: "js-todo-example",
-    keywords: ["todo","todo list","crud","example app","complete example"],
-    title: "Complete Todo App Example",
-    answer: "A full working todo list with add, delete, and save:\n\n\\`\\`\\`html\n<!DOCTYPE html>\n<html>\n<head><title>Todo App</title></head>\n<body>\n  <h1>My Todos</h1>\n  <input id=\"input\" placeholder=\"New todo\">\n  <button id=\"addBtn\">Add</button>\n  <ul id=\"list\"></ul>\n\n  <script>\n    const input = document.getElementById('input');\n    const addBtn = document.getElementById('addBtn');\n    const list = document.getElementById('list');\n\n    // Load saved todos\n    let todos = JSON.parse(localStorage.getItem('todos') || '[]');\n\n    function render() {\n      list.innerHTML = '';\n      todos.forEach((todo, index) => {\n        const li = document.createElement('li');\n        li.textContent = todo + ' ';\n        const btn = document.createElement('button');\n        btn.textContent = 'X';\n        btn.onclick = () => removeTodo(index);\n        li.appendChild(btn);\n        list.appendChild(li);\n      });\n    }\n\n    function addTodo() {\n      const text = input.value.trim();\n      if (!text) return;\n      todos.push(text);\n      save();\n      input.value = '';\n      render();\n    }\n\n    function removeTodo(index) {\n      todos.splice(index, 1);\n      save();\n      render();\n    }\n\n    function save() {\n      localStorage.setItem('todos', JSON.stringify(todos));\n    }\n\n    addBtn.onclick = addTodo;\n    input.addEventListener('keydown', e => {\n      if (e.key === 'Enter') addTodo();\n    });\n\n    render();\n  </script>\n</body>\n</html>\n\\`\\`\\`"
+    id: "js-todo",
+    keywords: ["todo","todo list","crud","example app"],
+    title: "Complete Todo App",
+    answer: "\\`\\`\\`html\n<!DOCTYPE html>\n<html>\n<body>\n  <h1>Todos</h1>\n  <input id=\"input\" placeholder=\"New todo\">\n  <button id=\"addBtn\">Add</button>\n  <ul id=\"list\"></ul>\n\n  <script>\n    const input = document.getElementById('input');\n    const list = document.getElementById('list');\n    let todos = JSON.parse(localStorage.getItem('todos') || '[]');\n\n    function render() {\n      list.innerHTML = '';\n      todos.forEach((todo, i) => {\n        const li = document.createElement('li');\n        li.textContent = todo;\n        const btn = document.createElement('button');\n        btn.textContent = 'X';\n        btn.onclick = () => {\n          todos.splice(i, 1);\n          save();\n        };\n        li.appendChild(btn);\n        list.appendChild(li);\n      });\n    }\n\n    function save() {\n      localStorage.setItem('todos', JSON.stringify(todos));\n      render();\n    }\n\n    document.getElementById('addBtn').onclick = () => {\n      const text = input.value.trim();\n      if (!text) return;\n      todos.push(text);\n      input.value = '';\n      save();\n    };\n\n    render();\n  </script>\n</body>\n</html>\n\\`\\`\\`"
   },
   {
     id: "js-form-validation",
-    keywords: ["validation","form validation","validate input"],
-    title: "JavaScript Form Validation",
-    answer: "Validate a form before submitting:\n\n\\`\\`\\`html\n<form id=\"myForm\">\n  <input type=\"text\" id=\"name\" placeholder=\"Name\">\n  <input type=\"email\" id=\"email\" placeholder=\"Email\">\n  <button type=\"submit\">Submit</button>\n  <div id=\"error\"></div>\n</form>\n\n<script>\n  const form = document.getElementById('myForm');\n  const errorDiv = document.getElementById('error');\n\n  form.addEventListener('submit', (e) => {\n    e.preventDefault();  // stop page reload\n\n    const name = document.getElementById('name').value.trim();\n    const email = document.getElementById('email').value.trim();\n\n    // Clear previous errors\n    errorDiv.textContent = '';\n\n    // Validate\n    if (name.length < 2) {\n      errorDiv.textContent = 'Name must be at least 2 characters';\n      return;\n    }\n\n    if (!email.includes('@') || !email.includes('.')) {\n      errorDiv.textContent = 'Please enter a valid email';\n      return;\n    }\n\n    // All good - submit or process\n    console.log('Valid!', { name, email });\n    form.reset();\n  });\n</script>\n\\`\\`\\`"
+    keywords: ["validation","form validation","validate"],
+    title: "Form Validation",
+    answer: "\\`\\`\\`html\n<form id=\"myForm\">\n  <input type=\"text\" id=\"name\" placeholder=\"Name\">\n  <input type=\"email\" id=\"email\" placeholder=\"Email\">\n  <button type=\"submit\">Submit</button>\n  <div id=\"error\"></div>\n</form>\n\n<script>\n  const form = document.getElementById('myForm');\n  const errorDiv = document.getElementById('error');\n\n  form.addEventListener('submit', (e) => {\n    e.preventDefault();\n\n    const name = document.getElementById('name').value.trim();\n    const email = document.getElementById('email').value.trim();\n\n    errorDiv.textContent = '';\n\n    if (name.length < 2) {\n      errorDiv.textContent = 'Name must be at least 2 characters';\n      return;\n    }\n\n    if (!email.includes('@') || !email.includes('.')) {\n      errorDiv.textContent = 'Please enter a valid email';\n      return;\n    }\n\n    console.log('Valid!', { name, email });\n    form.reset();\n  });\n</script>\n\\`\\`\\`"
   },
   {
     id: "js-debounce",
-    keywords: ["debounce","throttle","delay","performance"],
+    keywords: ["debounce","throttle","delay","search"],
     title: "JavaScript Debounce",
-    answer: "Debounce delays running a function until user stops typing (great for search):\n\n\\`\\`\\`js\nfunction debounce(func, delay) {\n  let timeout;\n  return function(...args) {\n    clearTimeout(timeout);\n    timeout = setTimeout(() => func(...args), delay);\n  };\n}\n\n// Usage - only runs 300ms after user stops typing\nconst searchInput = document.getElementById('search');\nconst doSearch = debounce((event) => {\n  console.log('Searching for:', event.target.value);\n  // fetch results here\n}, 300);\n\nsearchInput.addEventListener('input', doSearch);\n\\`\\`\\`\n\nWithout debounce, \"hello\" would fire the search 5 times. With debounce, it fires once, 300ms after typing stops."
+    answer: "Delays running a function until user stops typing:\n\n\\`\\`\\`js\nfunction debounce(func, delay) {\n  let timeout;\n  return function(...args) {\n    clearTimeout(timeout);\n    timeout = setTimeout(() => func(...args), delay);\n  };\n}\n\n// Usage - only runs 300ms after typing stops\nconst searchInput = document.getElementById('search');\nconst doSearch = debounce((e) => {\n  console.log('Search:', e.target.value);\n}, 300);\n\nsearchInput.addEventListener('input', doSearch);\n\\`\\`\\`\n\nGreat for search - prevents firing on every keystroke."
   },
   {
     id: "js-date",
-    keywords: ["date","time","format date","current time"],
+    keywords: ["date","time","format date"],
     title: "JavaScript Dates",
-    answer: "Working with dates:\n\n\\`\\`\\`js\n// Current date/time\nconst now = new Date();\n\n// Specific date\nconst birthday = new Date('2000-01-15');\nconst specific = new Date(2025, 0, 15);  // month is 0-indexed!\n\n// Get parts\nnow.getFullYear();      // 2025\nnow.getMonth();         // 0-11 (Jan = 0)\nnow.getDate();          // 1-31 (day of month)\nnow.getDay();           // 0-6 (Sunday = 0)\nnow.getHours();\nnow.getMinutes();\n\n// Format nicely\nnow.toLocaleDateString();      // '1/15/2025'\nnow.toLocaleTimeString();      // '3:45:23 PM'\nnow.toLocaleString();          // both\nnow.toISOString();             // '2025-01-15T15:45:23.000Z'\n\n// Format with options\nnow.toLocaleDateString('en-US', {\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n});  // 'January 15, 2025'\n\n// Timestamps (milliseconds since 1970)\nDate.now();              // current timestamp\nnew Date().getTime();    // same thing\n\\`\\`\\`"
+    answer: "\\`\\`\\`js\nconst now = new Date();\n\n// Get parts\nnow.getFullYear();      // 2025\nnow.getMonth();         // 0-11 (Jan = 0!)\nnow.getDate();          // 1-31\nnow.getHours();\n\n// Format\nnow.toLocaleDateString();      // '1/15/2025'\nnow.toLocaleTimeString();      // '3:45 PM'\nnow.toISOString();             // '2025-01-15T15:45:23.000Z'\n\n// Custom format\nnow.toLocaleDateString('en-US', {\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n});  // 'January 15, 2025'\n\n// Timestamps\nDate.now();              // milliseconds since 1970\n\\`\\`\\`"
   },
   {
     id: "js-error-handling",
     keywords: ["error","try catch","exception","throw"],
-    title: "JavaScript Error Handling",
-    answer: "Handle errors gracefully with try/catch:\n\n\\`\\`\\`js\ntry {\n  // Code that might fail\n  const data = JSON.parse(userInput);\n  console.log(data);\n} catch (error) {\n  // Runs if anything above throws\n  console.error('Failed to parse:', error.message);\n} finally {\n  // Always runs (cleanup)\n  console.log('Done');\n}\n\n// Throwing custom errors\nfunction divide(a, b) {\n  if (b === 0) {\n    throw new Error('Cannot divide by zero');\n  }\n  return a / b;\n}\n\ntry {\n  divide(10, 0);\n} catch (err) {\n  console.error(err.message);\n}\n\n// With async/await\nasync function loadData() {\n  try {\n    const response = await fetch('/api/data');\n    if (!response.ok) {\n      throw new Error('HTTP ' + response.status);\n    }\n    return await response.json();\n  } catch (error) {\n    console.error('Load failed:', error);\n    return null;\n  }\n}\n\\`\\`\\`"
-  },
-  {
-    id: "js-modules",
-    keywords: ["module","import","export","es6 module"],
-    title: "JavaScript Modules",
-    answer: "Split code into files with import/export:\n\n**math.js:**\n\\`\\`\\`js\n// Named exports\nexport function add(a, b) {\n  return a + b;\n}\n\nexport function multiply(a, b) {\n  return a * b;\n}\n\n// Default export (one per file)\nexport default function subtract(a, b) {\n  return a - b;\n}\n\\`\\`\\`\n\n**app.js:**\n\\`\\`\\`js\n// Import named exports\nimport { add, multiply } from './math.js';\n\n// Import default\nimport subtract from './math.js';\n\n// Import both\nimport subtract, { add, multiply } from './math.js';\n\n// Import everything\nimport * as math from './math.js';\nmath.add(1, 2);\n\nconsole.log(add(2, 3));         // 5\nconsole.log(subtract(10, 4));   // 6\n\\`\\`\\`\n\n**In HTML:**\n\\`\\`\\`html\n<script type=\"module\" src=\"app.js\"></script>\n\\`\\`\\`"
+    title: "Error Handling",
+    answer: "\\`\\`\\`js\ntry {\n  const data = JSON.parse(userInput);\n} catch (error) {\n  console.error('Failed:', error.message);\n} finally {\n  // Always runs\n  console.log('Done');\n}\n\n// Throw custom errors\nfunction divide(a, b) {\n  if (b === 0) throw new Error('Cannot divide by zero');\n  return a / b;\n}\n\n// With async\nasync function loadData() {\n  try {\n    const response = await fetch('/api/data');\n    if (!response.ok) throw new Error('HTTP ' + response.status);\n    return await response.json();\n  } catch (error) {\n    console.error('Load failed:', error);\n    return null;\n  }\n}\n\\`\\`\\`"
   },
   {
     id: "pattern-modal",
     keywords: ["modal","popup","dialog","overlay"],
     title: "Modal / Popup Component",
-    answer: "A reusable modal with backdrop:\n\n\\`\\`\\`html\n<button id=\"openBtn\">Open Modal</button>\n\n<div class=\"modal\" id=\"myModal\">\n  <div class=\"modal-content\">\n    <button class=\"close\">X</button>\n    <h2>Modal Title</h2>\n    <p>Modal content here.</p>\n  </div>\n</div>\n\n<style>\n  .modal {\n    display: none;\n    position: fixed;\n    inset: 0;\n    background: rgba(0,0,0,0.5);\n    align-items: center;\n    justify-content: center;\n    z-index: 100;\n  }\n  .modal.active { display: flex; }\n  .modal-content {\n    background: white;\n    padding: 24px;\n    border-radius: 8px;\n    max-width: 500px;\n    position: relative;\n  }\n  .close {\n    position: absolute;\n    top: 8px;\n    right: 8px;\n  }\n</style>\n\n<script>\n  const modal = document.getElementById('myModal');\n  document.getElementById('openBtn').onclick = () => modal.classList.add('active');\n  modal.querySelector('.close').onclick = () => modal.classList.remove('active');\n\n  // Close when clicking backdrop\n  modal.onclick = (e) => {\n    if (e.target === modal) modal.classList.remove('active');\n  };\n\n  // Close with Escape key\n  document.addEventListener('keydown', (e) => {\n    if (e.key === 'Escape') modal.classList.remove('active');\n  });\n</script>\n\\`\\`\\`"
+    answer: "\\`\\`\\`html\n<button id=\"openBtn\">Open Modal</button>\n\n<div class=\"modal\" id=\"myModal\">\n  <div class=\"modal-content\">\n    <button class=\"close\">X</button>\n    <h2>Modal Title</h2>\n    <p>Content here.</p>\n  </div>\n</div>\n\n<style>\n  .modal {\n    display: none;\n    position: fixed;\n    inset: 0;\n    background: rgba(0,0,0,0.5);\n    align-items: center;\n    justify-content: center;\n    z-index: 100;\n  }\n  .modal.active { display: flex; }\n  .modal-content {\n    background: white;\n    padding: 24px;\n    border-radius: 8px;\n    max-width: 500px;\n  }\n</style>\n\n<script>\n  const modal = document.getElementById('myModal');\n  document.getElementById('openBtn').onclick = () => modal.classList.add('active');\n  modal.querySelector('.close').onclick = () => modal.classList.remove('active');\n  modal.onclick = (e) => {\n    if (e.target === modal) modal.classList.remove('active');\n  };\n  document.addEventListener('keydown', (e) => {\n    if (e.key === 'Escape') modal.classList.remove('active');\n  });\n</script>\n\\`\\`\\`"
   },
   {
     id: "pattern-tabs",
-    keywords: ["tabs","tab component","tabbed interface"],
+    keywords: ["tabs","tab component"],
     title: "Tabbed Interface",
-    answer: "Simple tabs with active state:\n\n\\`\\`\\`html\n<div class=\"tabs\">\n  <button class=\"tab active\" data-tab=\"1\">Tab 1</button>\n  <button class=\"tab\" data-tab=\"2\">Tab 2</button>\n  <button class=\"tab\" data-tab=\"3\">Tab 3</button>\n</div>\n\n<div class=\"tab-content active\" data-content=\"1\">Content 1</div>\n<div class=\"tab-content\" data-content=\"2\">Content 2</div>\n<div class=\"tab-content\" data-content=\"3\">Content 3</div>\n\n<style>\n  .tabs { display: flex; border-bottom: 2px solid #eee; }\n  .tab {\n    padding: 10px 20px;\n    background: none;\n    border: none;\n    border-bottom: 2px solid transparent;\n    margin-bottom: -2px;\n    cursor: pointer;\n  }\n  .tab.active { border-bottom-color: blue; color: blue; }\n  .tab-content { display: none; padding: 20px; }\n  .tab-content.active { display: block; }\n</style>\n\n<script>\n  document.querySelectorAll('.tab').forEach(tab => {\n    tab.addEventListener('click', () => {\n      const id = tab.dataset.tab;\n\n      // Update active tab\n      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));\n      tab.classList.add('active');\n\n      // Update visible content\n      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));\n      document.querySelector(\\`[data-content=\"\\${id}\"]\\`).classList.add('active');\n    });\n  });\n</script>\n\\`\\`\\`"
+    answer: "\\`\\`\\`html\n<div class=\"tabs\">\n  <button class=\"tab active\" data-tab=\"1\">Tab 1</button>\n  <button class=\"tab\" data-tab=\"2\">Tab 2</button>\n</div>\n\n<div class=\"tab-content active\" data-content=\"1\">Content 1</div>\n<div class=\"tab-content\" data-content=\"2\">Content 2</div>\n\n<style>\n  .tabs { display: flex; border-bottom: 2px solid #eee; }\n  .tab {\n    padding: 10px 20px;\n    background: none;\n    border: none;\n    border-bottom: 2px solid transparent;\n    margin-bottom: -2px;\n    cursor: pointer;\n  }\n  .tab.active { border-bottom-color: blue; color: blue; }\n  .tab-content { display: none; padding: 20px; }\n  .tab-content.active { display: block; }\n</style>\n\n<script>\n  document.querySelectorAll('.tab').forEach(tab => {\n    tab.addEventListener('click', () => {\n      const id = tab.dataset.tab;\n      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));\n      tab.classList.add('active');\n      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));\n      document.querySelector('[data-content=\"' + id + '\"]').classList.add('active');\n    });\n  });\n</script>\n\\`\\`\\`"
   },
   {
     id: "pattern-dark-mode",
-    keywords: ["dark mode","theme","toggle theme","light mode"],
+    keywords: ["dark mode","theme","toggle theme"],
     title: "Dark Mode Toggle",
-    answer: "Toggle dark mode with saved preference:\n\n\\`\\`\\`html\n<button id=\"themeBtn\">Toggle Theme</button>\n\n<style>\n  body {\n    background: white;\n    color: black;\n    transition: background 0.3s, color 0.3s;\n  }\n  body.dark {\n    background: #1a1a1a;\n    color: #f5f5f5;\n  }\n</style>\n\n<script>\n  const btn = document.getElementById('themeBtn');\n\n  // Load saved preference on startup\n  if (localStorage.getItem('theme') === 'dark') {\n    document.body.classList.add('dark');\n  }\n\n  btn.addEventListener('click', () => {\n    document.body.classList.toggle('dark');\n    const isDark = document.body.classList.contains('dark');\n    localStorage.setItem('theme', isDark ? 'dark' : 'light');\n  });\n</script>\n\\`\\`\\`"
+    answer: "\\`\\`\\`html\n<button id=\"themeBtn\">Toggle Theme</button>\n\n<style>\n  body {\n    background: white;\n    color: black;\n    transition: background 0.3s, color 0.3s;\n  }\n  body.dark {\n    background: #1a1a1a;\n    color: #f5f5f5;\n  }\n</style>\n\n<script>\n  const btn = document.getElementById('themeBtn');\n\n  if (localStorage.getItem('theme') === 'dark') {\n    document.body.classList.add('dark');\n  }\n\n  btn.addEventListener('click', () => {\n    document.body.classList.toggle('dark');\n    const isDark = document.body.classList.contains('dark');\n    localStorage.setItem('theme', isDark ? 'dark' : 'light');\n  });\n</script>\n\\`\\`\\`"
   }
 ];
 
 // ===== FUZZY MATCHING =====
-// Levenshtein distance for typo tolerance
 function levenshtein(a, b) {
   if (a.length === 0) return b.length;
   if (b.length === 0) return a.length;
@@ -338,7 +309,6 @@ function levenshtein(a, b) {
   return matrix[b.length][a.length];
 }
 
-// Check if word is fuzzy-similar to keyword (typo tolerant)
 function fuzzyMatch(word, keyword) {
   word = word.toLowerCase();
   keyword = keyword.toLowerCase();
@@ -350,14 +320,13 @@ function fuzzyMatch(word, keyword) {
   return similarity > 0.75 ? similarity : 0;
 }
 
-// Score an entry against user query
 function scoreEntry(entry, queryWords) {
   let score = 0;
   const titleWords = entry.title.toLowerCase().split(/\\s+/);
   for (const qw of queryWords) {
     for (const keyword of entry.keywords) {
-      const keywordParts = keyword.split(/\\s+/);
-      for (const kwp of keywordParts) {
+      const parts = keyword.split(/\\s+/);
+      for (const kwp of parts) {
         const s = fuzzyMatch(qw, kwp);
         if (s > 0) score += s * 2;
       }
@@ -370,7 +339,6 @@ function scoreEntry(entry, queryWords) {
   return score;
 }
 
-// Find best matches for user question
 function searchKnowledgeBase(query) {
   const queryWords = query
     .toLowerCase()
@@ -394,9 +362,9 @@ function searchKnowledgeBase(query) {
 function buildOfflineReply(query) {
   const match = searchKnowledgeBase(query);
   if (!match) {
-    return "Both AI services are currently unavailable and I could not find a matching topic in my offline knowledge base. Please try again in a few minutes.\\n\\nAvailable offline topics include HTML basics, CSS layouts, JavaScript fundamentals, DOM manipulation, events, and common patterns. Try rephrasing your question with keywords like 'flexbox', 'array methods', 'form validation', or similar.";
+    return "**Offline Mode**\\n\\nAll AI services are temporarily unavailable, and I could not find a matching topic in my offline knowledge base. Please try again in a few minutes.\\n\\nAvailable offline topics include HTML basics, CSS layouts, JavaScript fundamentals, DOM manipulation, events, and common patterns. Try rephrasing your question with keywords like 'flexbox', 'array methods', 'form validation', or similar.";
   }
-  return "**Offline Mode - Solara Knowledge Base**\\n\\n_The AI services are temporarily unavailable, so I am answering from my local reference library._\\n\\n---\\n\\n## " + match.title + "\\n\\n" + match.answer + "\\n\\n---\\n\\n_Ask a follow-up question or try again in a few minutes when the AI is back online._";
+  return "**Offline Mode - Local Knowledge Base**\\n\\n_All AI providers are temporarily unavailable. This answer is from my built-in reference library._\\n\\n---\\n\\n## " + match.title + "\\n\\n" + match.answer + "\\n\\n---\\n\\n_Please try again in a few minutes when the AI is back online for follow-up questions._";
 }
 
 // ===== SYSTEM PROMPT =====
@@ -404,7 +372,7 @@ const CORE_IDENTITY = [
   "You are Solara - a warm, patient, and intelligent coding teacher for beginners learning HTML, CSS, and JavaScript.",
   "",
   "RULES:",
-  "1. NEVER dump code on vague messages like 'test', 'hi', 'help', 'gawa ka'. Reply conversationally and ask ONE clarifying question first.",
+  "1. NEVER dump code on vague messages like 'test', 'hi', 'help'. Reply conversationally and ask ONE clarifying question first.",
   "2. Match reply length to question depth. Short question = short reply.",
   "3. ALWAYS explain in plain words BEFORE showing code.",
   "4. Keep code examples SHORT (under 25 lines).",
@@ -413,18 +381,18 @@ const CORE_IDENTITY = [
   "7. Praise specifically, not generically.",
   "8. Never say 'As an AI language model'. You are Solara.",
   "",
-  "LANGUAGE: Reply in whatever language the user writes in. Formal English by default unless they use another language.",
+  "LANGUAGE: Reply in whatever language the user writes in. Formal English by default.",
   "",
   "FORMATTING: Use markdown with bold for key terms, fenced code blocks with language tags (html/css/js), short paragraphs.",
   "",
-  "ANTI-PATTERNS: No jargon dumps. No 100-line first replies. No random outputs like 'Hello to Goodbye' or 'print statements' - always respond to what the user ACTUALLY said.",
+  "ANTI-PATTERNS: No jargon dumps. No 100-line first replies. Always respond to what the user ACTUALLY said.",
 ].join("\n");
 
-const MODE_GENERAL = "\n\n=== MODE: GENERAL ===\nHandle any HTML/CSS/JS question. One concept at a time. Break bigger builds into stages.";
+const MODE_GENERAL = "\n\n=== MODE: GENERAL ===\nHandle any HTML/CSS/JS question. One concept at a time.";
 const MODE_REACT = "\n\n=== MODE: REACT EXPERT ===\nModern React 18+. Functional components with hooks. If user seems beginner, suggest JS basics first.";
-const MODE_DEBUGGER = "\n\n=== MODE: DEBUGGER ===\nFind root causes. Ask for code, expected behavior, actual behavior if not provided. Show minimal fixes.";
-const MODE_EXPLAINER = "\n\n=== MODE: EXPLAINER ===\nTeach concepts with: plain definition, real-life analogy, tiny code example, line-by-line breakdown, when to use it, common mistakes.";
-const MODE_REVIEWER = "\n\n=== MODE: CODE REVIEWER ===\nReview kindly. Verdict line, findings by severity (Critical/Important/Minor), always end with 1-2 things done WELL.";
+const MODE_DEBUGGER = "\n\n=== MODE: DEBUGGER ===\nFind root causes. Ask for code, expected, actual if not provided. Show minimal fixes.";
+const MODE_EXPLAINER = "\n\n=== MODE: EXPLAINER ===\nTeach concepts with: plain definition, real-life analogy, tiny code example, line-by-line breakdown, when to use, common mistakes.";
+const MODE_REVIEWER = "\n\n=== MODE: CODE REVIEWER ===\nReview kindly. Verdict, findings by severity, always end with 1-2 things done WELL.";
 const MODE_EXPLAIN_CODE = "\n\n=== MODE: EXPLAIN THIS CODE ===\nOverview in 1-2 sentences, then line-by-line explanation, then summary of key concepts. Do NOT rewrite the code.";
 
 const PROMPT_PRESETS = {
@@ -436,165 +404,47 @@ const PROMPT_PRESETS = {
   'explain-code': CORE_IDENTITY + MODE_EXPLAIN_CODE,
 };
 
-// ===== MAIN HANDLER =====
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
-  }
-
-  try {
-    const authSecret = process.env.AUTH_SECRET;
-    if (!authSecret) {
-      return res.status(500).json({
-        error: 'Auth is not configured. Set AUTH_SECRET in Vercel Environment Variables.',
-      });
-    }
-
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-
-    if (!verifyToken(token, authSecret)) {
-      return res.status(401).json({ error: 'Unauthorized. Please log in again.' });
-    }
-
-    const { messages, model, preset } = req.body || {};
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Missing or invalid "messages" array.' });
-    }
-
-    if (!model || !['deepseek', 'gemini'].includes(model)) {
-      return res.status(400).json({ error: 'Invalid model. Use "deepseek" or "gemini".' });
-    }
-
-    const presetKey = PROMPT_PRESETS[preset] ? preset : 'general';
-    const systemPrompt = PROMPT_PRESETS[presetKey];
-
-    // Get the user's last message for offline fallback matching
-    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-    const userQuery = lastUserMessage ? lastUserMessage.content : '';
-
-    // Try primary model, then fallback to the other, then offline knowledge base
-    let reply;
-    let source = model;
-    let usedFallback = false;
-
-    try {
-      // Try requested model first
-      if (model === 'deepseek') {
-        reply = await callDeepSeek(messages, systemPrompt);
-      } else {
-        reply = await callGemini(messages, systemPrompt);
-      }
-    } catch (primaryError) {
-      console.error('Primary model (' + model + ') failed:', primaryError.message);
-
-      // Try the OTHER model as fallback
-      try {
-        if (model === 'deepseek') {
-          reply = await callGemini(messages, systemPrompt);
-          source = 'gemini';
-        } else {
-          reply = await callDeepSeek(messages, systemPrompt);
-          source = 'deepseek';
-        }
-        usedFallback = true;
-      } catch (secondaryError) {
-        console.error('Secondary model failed:', secondaryError.message);
-
-        // Both AI services down - use offline knowledge base
-        reply = buildOfflineReply(userQuery);
-        source = 'offline';
-        usedFallback = true;
-      }
-    }
-
-    return res.status(200).json({
-      reply,
-      model: source,
-      preset: presetKey,
-      offline: source === 'offline',
-      fallback: usedFallback,
-    });
-  } catch (err) {
-    console.error('Chat handler error:', err);
-    return res.status(500).json({
-      error: err.message || 'Internal server error',
-    });
-  }
-}
-
-// ===== DEEPSEEK V3 (via OpenRouter) =====
-async function callDeepSeek(messages, systemPrompt) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not configured.');
-  }
+// ===== PROVIDER 1: GROQ (fastest, 14,400 req/day) =====
+async function callGroq(messages, systemPrompt) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
   const payload = {
-    model: 'deepseek/deepseek-chat-v3-0324',
+    model: 'llama-3.3-70b-versatile',
     messages: [
       { role: 'system', content: systemPrompt },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ...messages.map(m => ({ role: m.role, content: m.content })),
     ],
     temperature: 0.5,
-    top_p: 0.9,
-    frequency_penalty: 0.3,
-    presence_penalty: 0.2,
     max_tokens: 4096,
   };
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: 'Bearer ' + apiKey,
-      'HTTP-Referer': 'https://solara-ai.vercel.app',
-      'X-Title': 'Solara AI',
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    let errMsg = 'OpenRouter error (' + response.status + ')';
-    try {
-      const errData = JSON.parse(errText);
-      errMsg = (errData.error && errData.error.message) || errMsg;
-    } catch (e) {
-      errMsg = errText.slice(0, 200) || errMsg;
-    }
-    throw new Error(errMsg);
+    throw new Error('Groq error (' + response.status + '): ' + errText.slice(0, 200));
   }
 
   const data = await response.json();
   const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-
-  if (!reply) {
-    throw new Error('DeepSeek returned an empty response.');
-  }
-
+  if (!reply) throw new Error('Groq returned empty response');
   return reply;
 }
 
-// ===== GEMINI 2.0 FLASH =====
+// ===== PROVIDER 2: GEMINI 2.0 FLASH (Google, 1,500 req/day) =====
 async function callGemini(messages, systemPrompt) {
   const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not configured.');
-  }
-
-  const contents = messages.map((m) => ({
+  const contents = messages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
@@ -626,26 +476,211 @@ async function callGemini(messages, systemPrompt) {
 
   if (!response.ok) {
     const errText = await response.text();
-    let errMsg = 'Gemini error (' + response.status + ')';
-    try {
-      const errData = JSON.parse(errText);
-      errMsg = (errData.error && errData.error.message) || errMsg;
-    } catch (e) {
-      errMsg = errText.slice(0, 200) || errMsg;
-    }
-    throw new Error(errMsg);
+    throw new Error('Gemini error (' + response.status + '): ' + errText.slice(0, 200));
   }
 
   const data = await response.json();
   const reply = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
-
   if (!reply) {
     const finishReason = data.candidates && data.candidates[0] && data.candidates[0].finishReason;
-    if (finishReason === 'SAFETY') {
-      throw new Error('Gemini blocked the response due to safety filters.');
-    }
-    throw new Error('Gemini returned an empty response.');
+    if (finishReason === 'SAFETY') throw new Error('Gemini blocked by safety filters');
+    throw new Error('Gemini returned empty response');
+  }
+  return reply;
+}
+
+// ===== PROVIDER 3: DIRECT DEEPSEEK (10M free tokens) =====
+async function callDeepSeekDirect(messages, systemPrompt) {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
+
+  const payload = {
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ],
+    temperature: 0.5,
+    max_tokens: 4096,
+  };
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + apiKey,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error('DeepSeek Direct error (' + response.status + '): ' + errText.slice(0, 200));
   }
 
+  const data = await response.json();
+  const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!reply) throw new Error('DeepSeek Direct returned empty response');
   return reply;
+}
+
+// ===== PROVIDER 4: OPENROUTER DEEPSEEK (backup, 50-200/day) =====
+async function callOpenRouter(messages, systemPrompt) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+
+  const payload = {
+    model: 'deepseek/deepseek-chat-v3-0324',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+    ],
+    temperature: 0.5,
+    max_tokens: 4096,
+  };
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + apiKey,
+      'HTTP-Referer': 'https://solara-ai.vercel.app',
+      'X-Title': 'Solara AI',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error('OpenRouter error (' + response.status + '): ' + errText.slice(0, 200));
+  }
+
+  const data = await response.json();
+  const reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!reply) throw new Error('OpenRouter returned empty response');
+  return reply;
+}
+
+// ===== PROVIDER ROUTER =====
+// Maps 'deepseek'/'gemini' UI choice to preferred provider order.
+// Auto-skips providers with no API key configured.
+
+const PROVIDER_ORDER = {
+  // If user chose DeepSeek: try direct first, then OpenRouter, then fallbacks
+  deepseek: [
+    { name: 'DeepSeek Direct', fn: callDeepSeekDirect, envKey: 'DEEPSEEK_API_KEY' },
+    { name: 'OpenRouter', fn: callOpenRouter, envKey: 'OPENROUTER_API_KEY' },
+    { name: 'Groq', fn: callGroq, envKey: 'GROQ_API_KEY' },
+    { name: 'Gemini', fn: callGemini, envKey: 'GEMINI_API_KEY' },
+  ],
+  // If user chose Gemini: try Gemini first, then fastest fallbacks
+  gemini: [
+    { name: 'Gemini', fn: callGemini, envKey: 'GEMINI_API_KEY' },
+    { name: 'Groq', fn: callGroq, envKey: 'GROQ_API_KEY' },
+    { name: 'DeepSeek Direct', fn: callDeepSeekDirect, envKey: 'DEEPSEEK_API_KEY' },
+    { name: 'OpenRouter', fn: callOpenRouter, envKey: 'OPENROUTER_API_KEY' },
+  ],
+};
+
+async function tryProviders(preferredModel, messages, systemPrompt) {
+  const order = PROVIDER_ORDER[preferredModel] || PROVIDER_ORDER.gemini;
+  const errors = [];
+
+  for (const provider of order) {
+    // Skip providers with no API key
+    if (!process.env[provider.envKey]) {
+      errors.push(provider.name + ': no API key');
+      continue;
+    }
+
+    try {
+      const reply = await provider.fn(messages, systemPrompt);
+      return { reply, provider: provider.name, errors };
+    } catch (err) {
+      console.error(provider.name + ' failed:', err.message);
+      errors.push(provider.name + ': ' + err.message.slice(0, 100));
+      // Continue to next provider
+    }
+  }
+
+  // All providers failed
+  return { reply: null, provider: null, errors };
+}
+
+// ===== MAIN HANDLER =====
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
+  try {
+    const authSecret = process.env.AUTH_SECRET;
+    if (!authSecret) {
+      return res.status(500).json({
+        error: 'Auth is not configured. Set AUTH_SECRET in Vercel.',
+      });
+    }
+
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (!verifyToken(token, authSecret)) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in again.' });
+    }
+
+    const { messages, model, preset } = req.body || {};
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Missing or invalid "messages" array.' });
+    }
+
+    if (!model || !['deepseek', 'gemini'].includes(model)) {
+      return res.status(400).json({ error: 'Invalid model. Use "deepseek" or "gemini".' });
+    }
+
+    const presetKey = PROMPT_PRESETS[preset] ? preset : 'general';
+    const systemPrompt = PROMPT_PRESETS[presetKey];
+
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+    const userQuery = lastUserMessage ? lastUserMessage.content : '';
+
+    // Try all providers in order
+    const result = await tryProviders(model, messages, systemPrompt);
+
+    if (result.reply) {
+      // Success - one of the providers worked
+      const usedFallback = result.provider !== (model === 'gemini' ? 'Gemini' : 'DeepSeek Direct');
+      return res.status(200).json({
+        reply: result.reply,
+        model,
+        preset: presetKey,
+        provider: result.provider,
+        fallback: usedFallback,
+        offline: false,
+      });
+    }
+
+    // All 4 providers failed - use offline knowledge base
+    console.error('All providers failed:', result.errors);
+    const offlineReply = buildOfflineReply(userQuery);
+
+    return res.status(200).json({
+      reply: offlineReply,
+      model,
+      preset: presetKey,
+      provider: 'Offline KB',
+      fallback: true,
+      offline: true,
+    });
+  } catch (err) {
+    console.error('Chat handler error:', err);
+    return res.status(500).json({
+      error: err.message || 'Internal server error',
+    });
+  }
 }
