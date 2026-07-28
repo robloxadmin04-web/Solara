@@ -8,6 +8,8 @@ const state = {
   currentModel: localStorage.getItem('solara_model') || 'deepseek',
   currentPreset: localStorage.getItem('solara_preset') || 'general',
   isLoading: false,
+  authToken: localStorage.getItem('solara_token') || null,
+  authExpiresAt: parseInt(localStorage.getItem('solara_expires') || '0', 10),
 };
 
 // ===== DOM ELEMENTS =====
@@ -30,6 +32,12 @@ const els = {
   chatForm: document.getElementById('chatForm'),
   userInput: document.getElementById('userInput'),
   sendBtn: document.getElementById('sendBtn'),
+  loginModal: document.getElementById('loginModal'),
+  loginForm: document.getElementById('loginForm'),
+  loginPassword: document.getElementById('loginPassword'),
+  loginBtn: document.getElementById('loginBtn'),
+  loginError: document.getElementById('loginError'),
+  logoutBtn: document.getElementById('logoutBtn'),
 };
 
 // ===== SVG ICONS =====
@@ -79,7 +87,87 @@ function init() {
   els.presetBadge.textContent = PRESET_LABELS[state.currentPreset];
   renderChatList();
   attachEventListeners();
+  attachAuthListeners();
   autoResizeTextarea();
+  checkAuth();
+}
+
+// ===== AUTH =====
+function checkAuth() {
+  if (!state.authToken || !state.authExpiresAt || Date.now() > state.authExpiresAt) {
+    showLoginModal();
+  } else {
+    hideLoginModal();
+  }
+}
+
+function showLoginModal() {
+  document.body.classList.add('locked');
+  els.loginModal.classList.add('active');
+  els.loginError.textContent = '';
+  els.loginPassword.value = '';
+  setTimeout(() => els.loginPassword.focus(), 100);
+}
+
+function hideLoginModal() {
+  document.body.classList.remove('locked');
+  els.loginModal.classList.remove('active');
+  els.userInput.focus();
+}
+
+function logout() {
+  if (!confirm('Sign out of Solara?')) return;
+  state.authToken = null;
+  state.authExpiresAt = 0;
+  localStorage.removeItem('solara_token');
+  localStorage.removeItem('solara_expires');
+  showLoginModal();
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const password = els.loginPassword.value.trim();
+  if (!password) return;
+
+  els.loginBtn.disabled = true;
+  els.loginBtn.innerHTML = '<div class="login-spinner"></div><span class="login-btn-text">Signing in...</span>';
+  els.loginError.textContent = '';
+
+  try {
+    const response = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    if (!data.token || !data.expiresAt) {
+      throw new Error('Invalid response from server.');
+    }
+
+    state.authToken = data.token;
+    state.authExpiresAt = data.expiresAt;
+    localStorage.setItem('solara_token', data.token);
+    localStorage.setItem('solara_expires', String(data.expiresAt));
+
+    hideLoginModal();
+  } catch (err) {
+    els.loginError.textContent = err.message || 'Sign in failed.';
+    els.loginPassword.select();
+  } finally {
+    els.loginBtn.disabled = false;
+    els.loginBtn.innerHTML = '<span class="login-btn-text">Sign in</span>';
+  }
+}
+
+function attachAuthListeners() {
+  els.loginForm.addEventListener('submit', handleLogin);
+  els.logoutBtn.addEventListener('click', logout);
 }
 
 // ===== EVENT LISTENERS =====
@@ -292,7 +380,10 @@ async function handleSubmit(e) {
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + (state.authToken || ''),
+      },
       body: JSON.stringify({
         messages: state.messages,
         model: state.currentModel,
@@ -301,6 +392,16 @@ async function handleSubmit(e) {
     });
 
     removeTypingIndicator(typingId);
+
+    if (response.status === 401) {
+      // Session expired or invalid
+      state.authToken = null;
+      state.authExpiresAt = 0;
+      localStorage.removeItem('solara_token');
+      localStorage.removeItem('solara_expires');
+      showLoginModal();
+      throw new Error('Your session expired. Please sign in again.');
+    }
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
@@ -318,7 +419,7 @@ async function handleSubmit(e) {
     saveCurrentChat();
   } catch (err) {
     removeTypingIndicator(typingId);
-    showError('Error: ' + err.message + '\n\nNote: The backend and API keys still need to be set up on Vercel.');
+    showError('Error: ' + err.message);
   } finally {
     state.isLoading = false;
     els.sendBtn.disabled = false;
