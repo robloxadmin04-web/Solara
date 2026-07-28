@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Solara AI — A minimal AI coding assistant for HTML, CSS, JavaScript, Node.js, and more." />
+  <meta name="description" content="Solara AI â€” A minimal AI coding teacher for HTML, CSS, JavaScript." />
   <title>Solara AI</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
@@ -35,9 +35,68 @@
         <span>New chat</span>
       </button>
 
+      <!-- QUICK TOOLS -->
+      <div class="quick-tools">
+        <button class="tool-btn" id="openPlaygroundBtn" title="Open live code playground">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+          <span>Playground</span>
+        </button>
+        <button class="tool-btn" id="openExplainBtn" title="Paste code and get it explained">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span>Explain code</span>
+        </button>
+      </div>
+
       <div class="sidebar-section">
         <div class="section-title">Recent</div>
         <div class="chat-list" id="chatList"></div>
+      </div>
+
+      <!-- PROGRESS DASHBOARD -->
+      <div class="dashboard-panel" id="dashboardPanel">
+        <button class="dashboard-toggle" id="dashboardToggle" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="M7 12l4-4 4 4 5-5"/>
+          </svg>
+          <span>Your progress</span>
+          <svg class="dashboard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="dashboard-body" id="dashboardBody">
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-value" id="statChats">0</div>
+              <div class="stat-label">Chats</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="statMessages">0</div>
+              <div class="stat-label">Questions</div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-value" id="statCode">0</div>
+              <div class="stat-label">Code seen</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="statStreak">0</div>
+              <div class="stat-label">Day streak</div>
+            </div>
+          </div>
+          <div class="stat-fav">
+            <div class="stat-label">Favorite mode</div>
+            <div class="stat-fav-value" id="statFavMode">â€”</div>
+          </div>
+        </div>
       </div>
 
       <div class="sidebar-footer">
@@ -74,15 +133,14 @@
         </button>
         <div class="footer-info">
           <span>Solara</span>
-          <span class="dot">·</span>
-          <span>v1.0</span>
+          <span class="dot">Â·</span>
+          <span>v2.0</span>
         </div>
       </div>
     </aside>
 
     <!-- Main Chat Area -->
     <main class="main">
-      <!-- Top Bar -->
       <header class="topbar">
         <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
@@ -103,7 +161,6 @@
         </button>
       </header>
 
-      <!-- Chat Messages -->
       <div class="chat-container" id="chatContainer">
         <div class="welcome-screen" id="welcomeScreen">
           <div class="welcome-logo" aria-hidden="true">
@@ -113,50 +170,48 @@
             </svg>
           </div>
           <h1 class="welcome-title">Solara</h1>
-          <p class="welcome-subtitle">A minimal AI coding assistant for the web.</p>
+          <p class="welcome-subtitle">Your patient coding teacher for HTML, CSS, and JavaScript.</p>
 
           <div class="suggestion-grid">
-            <button class="suggestion-card" data-prompt="Build a modern landing page with HTML, CSS, and JavaScript that includes a hero section, features, and a contact form.">
+            <button class="suggestion-card" data-prompt="Turuan mo ako ng basics ng HTML. Beginner ako.">
               <div class="suggestion-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <path d="M3 9h18M9 21V9"/>
+                  <path d="M4 4h16v16H4z"/>
+                  <path d="M4 9h16"/>
                 </svg>
               </div>
-              <div class="suggestion-title">Landing page</div>
-              <div class="suggestion-desc">Modern responsive layout</div>
+              <div class="suggestion-title">Learn HTML basics</div>
+              <div class="suggestion-desc">Start from zero</div>
             </button>
-            <button class="suggestion-card" data-prompt="Build a todo list app using vanilla JavaScript with local storage persistence.">
+            <button class="suggestion-card" data-prompt="Paano gumawa ng button na may color at mag-a-alert kapag na-click?">
               <div class="suggestion-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 11 12 14 22 4"/>
-                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M8 12h8"/>
                 </svg>
               </div>
-              <div class="suggestion-title">Todo app</div>
-              <div class="suggestion-desc">Vanilla JS with storage</div>
+              <div class="suggestion-title">My first button</div>
+              <div class="suggestion-desc">HTML + CSS + JS combined</div>
             </button>
-            <button class="suggestion-card" data-prompt="Explain how JavaScript async and await work, with practical examples.">
+            <button class="suggestion-card" data-prompt="I-explain mo yung difference ng var, let, at const sa JavaScript, simple lang.">
               <div class="suggestion-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
                   <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
                 </svg>
               </div>
-              <div class="suggestion-title">Learn async/await</div>
-              <div class="suggestion-desc">JavaScript concepts</div>
+              <div class="suggestion-title">Learn variables</div>
+              <div class="suggestion-desc">var, let, const</div>
             </button>
-            <button class="suggestion-card" data-prompt="Debug this code and explain what is wrong: function sum(a, b) { return a - b }">
+            <button class="suggestion-card" data-prompt="Paano gumawa ng centered box sa CSS gamit ng flexbox?">
               <div class="suggestion-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 2l1.5 1.5M16 2l-1.5 1.5"/>
-                  <path d="M12 20v-8"/>
-                  <path d="M6 8a6 6 0 0112 0v4a6 6 0 01-12 0z"/>
-                  <path d="M4 14h2M18 14h2M4 10h2M18 10h2"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <rect x="9" y="9" width="6" height="6"/>
                 </svg>
               </div>
-              <div class="suggestion-title">Debug code</div>
-              <div class="suggestion-desc">Find and fix bugs</div>
+              <div class="suggestion-title">Center a box (Flexbox)</div>
+              <div class="suggestion-desc">The classic CSS trick</div>
             </button>
           </div>
         </div>
@@ -164,14 +219,13 @@
         <div class="messages" id="messages"></div>
       </div>
 
-      <!-- Input Area -->
       <div class="input-area">
         <form class="input-form" id="chatForm">
           <div class="input-wrapper">
             <textarea
               id="userInput"
               class="user-input"
-              placeholder="Ask a coding question..."
+              placeholder="Ask a coding question or paste code..."
               rows="1"
               autocomplete="off"
             ></textarea>
@@ -183,7 +237,7 @@
             </button>
           </div>
           <div class="input-hint">
-            <kbd>Enter</kbd> to send · <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line
+            <kbd>Enter</kbd> to send Â· <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line
           </div>
         </form>
       </div>
@@ -192,7 +246,89 @@
     <!-- Sidebar Overlay (Mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Login Modal -->
+    <!-- ===== LIVE CODE PLAYGROUND MODAL ===== -->
+    <div class="modal playground-modal" id="playgroundModal">
+      <div class="modal-card playground-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span>Live Playground</span>
+          </div>
+          <div class="modal-header-actions">
+            <button class="modal-action-btn" id="playgroundRunBtn" title="Run code (Ctrl+Enter)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Run</span>
+            </button>
+            <button class="modal-action-btn" id="playgroundResetBtn" title="Reset all code">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1015-6.7L21 8"/>
+                <path d="M21 3v5h-5"/>
+              </svg>
+              <span>Reset</span>
+            </button>
+            <button class="icon-btn modal-close" id="playgroundCloseBtn" aria-label="Close playground">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="playground-body">
+          <div class="playground-editors">
+            <div class="playground-tabs">
+              <button class="playground-tab active" data-tab="html">HTML</button>
+              <button class="playground-tab" data-tab="css">CSS</button>
+              <button class="playground-tab" data-tab="js">JS</button>
+            </div>
+            <textarea class="playground-editor active" id="pgHtml" data-tab="html" spellcheck="false" placeholder="<!-- HTML dito -->"></textarea>
+            <textarea class="playground-editor" id="pgCss" data-tab="css" spellcheck="false" placeholder="/* CSS dito */"></textarea>
+            <textarea class="playground-editor" id="pgJs" data-tab="js" spellcheck="false" placeholder="// JavaScript dito"></textarea>
+          </div>
+          <div class="playground-preview-wrapper">
+            <div class="playground-preview-label">Preview</div>
+            <iframe class="playground-preview" id="pgPreview" title="Live preview" sandbox="allow-scripts allow-modals"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EXPLAIN CODE MODAL ===== -->
+    <div class="modal explain-modal" id="explainModal">
+      <div class="modal-card explain-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Explain This Code</span>
+          </div>
+          <button class="icon-btn modal-close" id="explainCloseBtn" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="explain-body">
+          <p class="explain-hint">I-paste mo yung code na gusto mong maintindihan. I-explain ko sya line-by-line sa simple na paraan.</p>
+          <textarea class="explain-input" id="explainInput" spellcheck="false" placeholder="Paste yung HTML, CSS, o JavaScript code dito..."></textarea>
+          <div class="explain-actions">
+            <button class="secondary-btn" id="explainClearBtn" type="button">Clear</button>
+            <button class="primary-btn" id="explainSubmitBtn" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Explain it</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LOGIN MODAL ===== -->
     <div class="login-modal" id="loginModal">
       <div class="login-card">
         <div class="login-logo" aria-hidden="true">
