@@ -1,6 +1,32 @@
 // ===== SOLARA AI - Backend (Vercel Serverless Function) =====
 // Handles chat requests to DeepSeek V3 (via OpenRouter) and Gemini 2.0 Flash (via Google AI Studio)
 
+import crypto from 'crypto';
+
+// ===== TOKEN VERIFICATION =====
+function verifyToken(token, secret) {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+
+  try {
+    const payload = Buffer.from(parts[0], 'base64url').toString('utf8');
+    const expiresAt = parseInt(payload, 10);
+    if (!expiresAt || Date.now() > expiresAt) return false;
+
+    const expectedSig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+    const providedSig = parts[1];
+
+    if (expectedSig.length !== providedSig.length) return false;
+    return crypto.timingSafeEqual(
+      Buffer.from(expectedSig, 'hex'),
+      Buffer.from(providedSig, 'hex')
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
 const PROMPT_PRESETS = {
   general: `You are Solara, an expert AI coding assistant specializing in web development.
 
@@ -130,6 +156,21 @@ export default async function handler(req, res) {
   }
 
   try {
+    // ===== AUTH CHECK =====
+    const authSecret = process.env.AUTH_SECRET;
+    if (!authSecret) {
+      return res.status(500).json({
+        error: 'Auth is not configured. Set AUTH_SECRET in Vercel Environment Variables.',
+      });
+    }
+
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (!verifyToken(token, authSecret)) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in again.' });
+    }
+
     const { messages, model, preset } = req.body || {};
 
     // Validation
