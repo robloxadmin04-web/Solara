@@ -1,4 +1,5 @@
-// ===== SOLARA AI - Frontend Logic =====
+// ===== SOLARA AI - Frontend Logic v7 =====
+// Batch 1: Live Playground + Explain Code + Progress Dashboard
 
 // ===== STATE =====
 const state = {
@@ -10,6 +11,8 @@ const state = {
   isLoading: false,
   authToken: localStorage.getItem('solara_token') || null,
   authExpiresAt: parseInt(localStorage.getItem('solara_expires') || '0', 10),
+  stats: JSON.parse(localStorage.getItem('solara_stats') || '{}'),
+  dashboardExpanded: localStorage.getItem('solara_dash') === '1',
 };
 
 // ===== DOM ELEMENTS =====
@@ -38,6 +41,34 @@ const els = {
   loginBtn: document.getElementById('loginBtn'),
   loginError: document.getElementById('loginError'),
   logoutBtn: document.getElementById('logoutBtn'),
+
+  // Playground
+  openPlaygroundBtn: document.getElementById('openPlaygroundBtn'),
+  playgroundModal: document.getElementById('playgroundModal'),
+  playgroundCloseBtn: document.getElementById('playgroundCloseBtn'),
+  playgroundRunBtn: document.getElementById('playgroundRunBtn'),
+  playgroundResetBtn: document.getElementById('playgroundResetBtn'),
+  pgHtml: document.getElementById('pgHtml'),
+  pgCss: document.getElementById('pgCss'),
+  pgJs: document.getElementById('pgJs'),
+  pgPreview: document.getElementById('pgPreview'),
+
+  // Explain
+  openExplainBtn: document.getElementById('openExplainBtn'),
+  explainModal: document.getElementById('explainModal'),
+  explainCloseBtn: document.getElementById('explainCloseBtn'),
+  explainInput: document.getElementById('explainInput'),
+  explainSubmitBtn: document.getElementById('explainSubmitBtn'),
+  explainClearBtn: document.getElementById('explainClearBtn'),
+
+  // Dashboard
+  dashboardPanel: document.getElementById('dashboardPanel'),
+  dashboardToggle: document.getElementById('dashboardToggle'),
+  statChats: document.getElementById('statChats'),
+  statMessages: document.getElementById('statMessages'),
+  statCode: document.getElementById('statCode'),
+  statStreak: document.getElementById('statStreak'),
+  statFavMode: document.getElementById('statFavMode'),
 };
 
 // ===== SVG ICONS =====
@@ -48,9 +79,10 @@ const ICONS = {
   copy: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`,
   check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`,
+  play: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
 };
 
-// ===== MARKED CONFIG (Markdown Renderer) =====
+// ===== MARKED CONFIG =====
 marked.setOptions({
   breaks: true,
   gfm: true,
@@ -64,19 +96,19 @@ marked.setOptions({
   },
 });
 
-// ===== MODEL LABELS =====
+// ===== LABELS =====
 const MODEL_LABELS = {
   deepseek: 'DeepSeek V3',
   gemini: 'Gemini 2.0 Flash',
 };
 
-// ===== SYSTEM PROMPT PRESETS =====
 const PRESET_LABELS = {
   general: 'General',
   react: 'React Expert',
   debugger: 'Debugger',
   explainer: 'Explainer',
   reviewer: 'Code Reviewer',
+  'explain-code': 'Explain Code',
 };
 
 // ===== INIT =====
@@ -88,7 +120,12 @@ function init() {
   renderChatList();
   attachEventListeners();
   attachAuthListeners();
+  attachPlaygroundListeners();
+  attachExplainListeners();
+  attachDashboardListeners();
   autoResizeTextarea();
+  updateStreak();
+  renderDashboard();
   checkAuth();
 }
 
@@ -172,18 +209,15 @@ function attachAuthListeners() {
 
 // ===== EVENT LISTENERS =====
 function attachEventListeners() {
-  // Sidebar toggle (mobile)
   els.menuBtn.addEventListener('click', openSidebar);
   els.sidebarClose.addEventListener('click', closeSidebar);
   els.sidebarOverlay.addEventListener('click', closeSidebar);
 
-  // New chat
   els.newChatBtn.addEventListener('click', () => {
     startNewChat();
     if (window.innerWidth <= 768) closeSidebar();
   });
 
-  // Delete current chat entirely (from view + history)
   els.clearBtn.addEventListener('click', () => {
     if (state.messages.length === 0 && !state.currentChatId) return;
     if (confirm('Delete this chat? This cannot be undone.')) {
@@ -195,27 +229,23 @@ function attachEventListeners() {
     }
   });
 
-  // Export chat as Markdown
   els.exportBtn.addEventListener('click', exportChatAsMarkdown);
 
-  // Model switcher
   els.modelSelect.addEventListener('change', (e) => {
     state.currentModel = e.target.value;
     localStorage.setItem('solara_model', state.currentModel);
     els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
   });
 
-  // Preset switcher
   els.presetSelect.addEventListener('change', (e) => {
     state.currentPreset = e.target.value;
     localStorage.setItem('solara_preset', state.currentPreset);
     els.presetBadge.textContent = PRESET_LABELS[state.currentPreset];
+    trackPresetUse(state.currentPreset);
   });
 
-  // Chat form
   els.chatForm.addEventListener('submit', handleSubmit);
 
-  // Textarea auto-resize + Enter to send
   els.userInput.addEventListener('input', autoResizeTextarea);
   els.userInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -224,7 +254,6 @@ function attachEventListeners() {
     }
   });
 
-  // Suggestion cards
   document.querySelectorAll('.suggestion-card').forEach((card) => {
     card.addEventListener('click', () => {
       const prompt = card.getAttribute('data-prompt');
@@ -232,6 +261,14 @@ function attachEventListeners() {
       autoResizeTextarea();
       els.chatForm.dispatchEvent(new Event('submit'));
     });
+  });
+
+  // ESC key closes any open modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (els.playgroundModal.classList.contains('active')) closePlayground();
+      if (els.explainModal.classList.contains('active')) closeExplain();
+    }
   });
 }
 
@@ -286,7 +323,9 @@ function loadChat(chatId) {
 function saveCurrentChat() {
   if (state.messages.length === 0) return;
 
-  if (!state.currentChatId) {
+  const isNewChat = !state.currentChatId;
+
+  if (isNewChat) {
     state.currentChatId = 'chat_' + Date.now();
     const firstUserMsg = state.messages.find((m) => m.role === 'user');
     const title = firstUserMsg
@@ -299,6 +338,7 @@ function saveCurrentChat() {
       messages: state.messages,
       updatedAt: Date.now(),
     });
+    trackChatCreated();
   } else {
     const chat = state.chats.find((c) => c.id === state.currentChatId);
     if (chat) {
@@ -369,6 +409,7 @@ async function handleSubmit(e) {
   els.welcomeScreen.style.display = 'none';
 
   addMessage('user', text);
+  trackQuestionAsked();
   els.userInput.value = '';
   autoResizeTextarea();
 
@@ -394,7 +435,6 @@ async function handleSubmit(e) {
     removeTypingIndicator(typingId);
 
     if (response.status === 401) {
-      // Session expired or invalid
       state.authToken = null;
       state.authExpiresAt = 0;
       localStorage.removeItem('solara_token');
@@ -416,7 +456,10 @@ async function handleSubmit(e) {
     }
 
     addMessage('assistant', reply);
+    trackCodeBlocks(reply);
+    trackPresetUse(state.currentPreset);
     saveCurrentChat();
+    renderDashboard();
   } catch (err) {
     removeTypingIndicator(typingId);
     showError('Error: ' + err.message);
@@ -471,24 +514,44 @@ function enhanceCodeBlock(pre) {
   if (!code) return;
 
   const lang = (code.className.match(/language-(\w+)/) || [])[1] || 'code';
+  const langLower = lang.toLowerCase();
+  const isRunnable = ['html', 'css', 'js', 'javascript'].includes(langLower);
 
   const wrapper = document.createElement('div');
   wrapper.className = 'code-block-wrapper';
 
   const header = document.createElement('div');
   header.className = 'code-block-header';
-  header.innerHTML = `
-    <span class="code-lang">${lang}</span>
-    <button class="copy-btn" type="button">
-      ${ICONS.copy}
-      <span>Copy</span>
-    </button>
-  `;
+
+  const actions = isRunnable
+    ? `
+      <div class="code-block-actions">
+        <button class="playground-btn" type="button" title="Open in Playground">
+          ${ICONS.play}
+          <span>Playground</span>
+        </button>
+        <button class="copy-btn" type="button">
+          ${ICONS.copy}
+          <span>Copy</span>
+        </button>
+      </div>
+    `
+    : `
+      <div class="code-block-actions">
+        <button class="copy-btn" type="button">
+          ${ICONS.copy}
+          <span>Copy</span>
+        </button>
+      </div>
+    `;
+
+  header.innerHTML = `<span class="code-lang">${lang}</span>${actions}`;
 
   pre.parentNode.insertBefore(wrapper, pre);
   wrapper.appendChild(header);
   wrapper.appendChild(pre);
 
+  // Copy handler
   const copyBtn = header.querySelector('.copy-btn');
   copyBtn.addEventListener('click', () => {
     const text = code.textContent;
@@ -501,6 +564,14 @@ function enhanceCodeBlock(pre) {
       }, 2000);
     });
   });
+
+  // Playground handler (only for runnable code)
+  if (isRunnable) {
+    const pgBtn = header.querySelector('.playground-btn');
+    pgBtn.addEventListener('click', () => {
+      openPlaygroundWithCode(langLower, code.textContent);
+    });
+  }
 }
 
 // ===== EXPORT CHAT AS MARKDOWN =====
@@ -511,11 +582,10 @@ function exportChatAsMarkdown() {
   }
 
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
-  const timeStr = now.toTimeString().slice(0, 5); // HH:MM
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = now.toTimeString().slice(0, 5);
   const modelName = MODEL_LABELS[state.currentModel];
 
-  // Build Markdown content
   let md = `# Solara AI Chat Export\n\n`;
   md += `- **Date:** ${dateStr} ${timeStr}\n`;
   md += `- **Model:** ${modelName}\n`;
@@ -531,9 +601,8 @@ function exportChatAsMarkdown() {
     }
   });
 
-  md += `\n---\n\n_Exported from Solara AI · ${dateStr}_\n`;
+  md += `\n---\n\n_Exported from Solara AI Â· ${dateStr}_\n`;
 
-  // Trigger download
   const filename = `solara-chat-${dateStr}-${timeStr.replace(':', '')}.md`;
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -595,6 +664,345 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// =====================================================
+// ===== FEATURE 1: LIVE CODE PLAYGROUND =====
+// =====================================================
+
+const PG_STORAGE_KEY = 'solara_playground';
+
+function attachPlaygroundListeners() {
+  els.openPlaygroundBtn.addEventListener('click', () => {
+    openPlayground();
+    if (window.innerWidth <= 768) closeSidebar();
+  });
+  els.playgroundCloseBtn.addEventListener('click', closePlayground);
+  els.playgroundRunBtn.addEventListener('click', runPlayground);
+  els.playgroundResetBtn.addEventListener('click', resetPlayground);
+
+  // Tab switching
+  document.querySelectorAll('.playground-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.getAttribute('data-tab');
+      switchPlaygroundTab(tabName);
+    });
+  });
+
+  // Autosave on edit
+  [els.pgHtml, els.pgCss, els.pgJs].forEach((editor) => {
+    editor.addEventListener('input', savePlaygroundState);
+    editor.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + Enter to run
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runPlayground();
+      }
+      // Tab to indent
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '  ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 2;
+        savePlaygroundState();
+      }
+    });
+  });
+
+  // Restore saved code on load
+  restorePlaygroundState();
+}
+
+function openPlayground() {
+  els.playgroundModal.classList.add('active');
+  setTimeout(() => runPlayground(), 100);
+}
+
+function closePlayground() {
+  els.playgroundModal.classList.remove('active');
+}
+
+function openPlaygroundWithCode(lang, code) {
+  openPlayground();
+
+  // Fill in the appropriate editor
+  if (lang === 'html') {
+    els.pgHtml.value = code;
+    switchPlaygroundTab('html');
+  } else if (lang === 'css') {
+    els.pgCss.value = code;
+    switchPlaygroundTab('css');
+  } else if (lang === 'js' || lang === 'javascript') {
+    els.pgJs.value = code;
+    switchPlaygroundTab('js');
+  }
+
+  savePlaygroundState();
+  setTimeout(() => runPlayground(), 100);
+}
+
+function switchPlaygroundTab(tabName) {
+  document.querySelectorAll('.playground-tab').forEach((t) => {
+    t.classList.toggle('active', t.getAttribute('data-tab') === tabName);
+  });
+  document.querySelectorAll('.playground-editor').forEach((e) => {
+    e.classList.toggle('active', e.getAttribute('data-tab') === tabName);
+  });
+}
+
+function runPlayground() {
+  const html = els.pgHtml.value || '';
+  const css = els.pgCss.value || '';
+  const js = els.pgJs.value || '';
+
+  const combined = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>${css}</style>
+</head>
+<body>
+${html}
+<script>
+try {
+${js}
+} catch(err) {
+document.body.innerHTML += '<div style="background:#fee;color:#c00;padding:10px;margin:10px 0;border-radius:6px;font-family:monospace;font-size:12px;border:1px solid #fcc;">Error: ' + err.message + '</div>';
+}
+<\/script>
+</body>
+</html>`;
+
+  els.pgPreview.srcdoc = combined;
+}
+
+function resetPlayground() {
+  if (!confirm('Reset all playground code? This will delete what you have written.')) return;
+  els.pgHtml.value = '';
+  els.pgCss.value = '';
+  els.pgJs.value = '';
+  savePlaygroundState();
+  runPlayground();
+}
+
+function savePlaygroundState() {
+  const state = {
+    html: els.pgHtml.value,
+    css: els.pgCss.value,
+    js: els.pgJs.value,
+  };
+  try {
+    localStorage.setItem(PG_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {}
+}
+
+function restorePlaygroundState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PG_STORAGE_KEY) || '{}');
+    if (saved.html) els.pgHtml.value = saved.html;
+    if (saved.css) els.pgCss.value = saved.css;
+    if (saved.js) els.pgJs.value = saved.js;
+  } catch (e) {}
+}
+
+// =====================================================
+// ===== FEATURE 2: EXPLAIN CODE =====
+// =====================================================
+
+function attachExplainListeners() {
+  els.openExplainBtn.addEventListener('click', () => {
+    openExplain();
+    if (window.innerWidth <= 768) closeSidebar();
+  });
+  els.explainCloseBtn.addEventListener('click', closeExplain);
+  els.explainClearBtn.addEventListener('click', () => {
+    els.explainInput.value = '';
+    els.explainInput.focus();
+  });
+  els.explainSubmitBtn.addEventListener('click', submitExplainRequest);
+
+  // Ctrl/Cmd + Enter to submit
+  els.explainInput.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      submitExplainRequest();
+    }
+  });
+}
+
+function openExplain() {
+  els.explainModal.classList.add('active');
+  setTimeout(() => els.explainInput.focus(), 100);
+}
+
+function closeExplain() {
+  els.explainModal.classList.remove('active');
+}
+
+async function submitExplainRequest() {
+  const code = els.explainInput.value.trim();
+  if (!code) {
+    els.explainInput.focus();
+    return;
+  }
+
+  // Close the modal
+  closeExplain();
+
+  // Switch to explain-code preset (temporarily for this message)
+  const originalPreset = state.currentPreset;
+  state.currentPreset = 'explain-code';
+
+  // Start a new chat for the explanation
+  startNewChat();
+
+  // Build the message
+  const userMessage = `I-explain mo yung code na 'to line-by-line:\n\n\`\`\`\n${code}\n\`\`\``;
+
+  els.userInput.value = userMessage;
+  els.welcomeScreen.style.display = 'none';
+
+  // Trigger send
+  els.chatForm.dispatchEvent(new Event('submit'));
+
+  // Restore preset after a short delay
+  setTimeout(() => {
+    state.currentPreset = originalPreset;
+    els.presetSelect.value = originalPreset;
+    els.presetBadge.textContent = PRESET_LABELS[originalPreset];
+  }, 500);
+
+  // Clear the explain input
+  els.explainInput.value = '';
+}
+
+// =====================================================
+// ===== FEATURE 3: PROGRESS DASHBOARD =====
+// =====================================================
+
+function attachDashboardListeners() {
+  els.dashboardToggle.addEventListener('click', toggleDashboard);
+
+  // Apply saved expanded state
+  if (state.dashboardExpanded) {
+    els.dashboardPanel.classList.add('expanded');
+  }
+}
+
+function toggleDashboard() {
+  els.dashboardPanel.classList.toggle('expanded');
+  state.dashboardExpanded = els.dashboardPanel.classList.contains('expanded');
+  localStorage.setItem('solara_dash', state.dashboardExpanded ? '1' : '0');
+}
+
+function getStats() {
+  if (!state.stats || typeof state.stats !== 'object') {
+    state.stats = {};
+  }
+  return {
+    chatsCreated: state.stats.chatsCreated || 0,
+    questionsAsked: state.stats.questionsAsked || 0,
+    codeBlocksSeen: state.stats.codeBlocksSeen || 0,
+    streakDays: state.stats.streakDays || 0,
+    lastActiveDate: state.stats.lastActiveDate || null,
+    presetUsage: state.stats.presetUsage || {},
+  };
+}
+
+function saveStats(stats) {
+  state.stats = stats;
+  localStorage.setItem('solara_stats', JSON.stringify(stats));
+}
+
+function trackChatCreated() {
+  const stats = getStats();
+  stats.chatsCreated += 1;
+  saveStats(stats);
+  renderDashboard();
+}
+
+function trackQuestionAsked() {
+  const stats = getStats();
+  stats.questionsAsked += 1;
+  saveStats(stats);
+  renderDashboard();
+}
+
+function trackCodeBlocks(replyText) {
+  // Count code blocks in the assistant's reply
+  const matches = replyText.match(/```[\s\S]*?```/g) || [];
+  if (matches.length === 0) return;
+
+  const stats = getStats();
+  stats.codeBlocksSeen += matches.length;
+  saveStats(stats);
+  renderDashboard();
+}
+
+function trackPresetUse(preset) {
+  const stats = getStats();
+  if (!stats.presetUsage) stats.presetUsage = {};
+  stats.presetUsage[preset] = (stats.presetUsage[preset] || 0) + 1;
+  saveStats(stats);
+  renderDashboard();
+}
+
+function updateStreak() {
+  const stats = getStats();
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  if (!stats.lastActiveDate) {
+    // First visit
+    stats.streakDays = 1;
+    stats.lastActiveDate = today;
+    saveStats(stats);
+    return;
+  }
+
+  if (stats.lastActiveDate === today) {
+    // Already counted today
+    return;
+  }
+
+  // Check if last active was yesterday
+  const lastDate = new Date(stats.lastActiveDate);
+  const todayDate = new Date(today);
+  const diffMs = todayDate - lastDate;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 1) {
+    // Consecutive day â€” extend streak
+    stats.streakDays += 1;
+  } else if (diffDays > 1) {
+    // Streak broken â€” reset to 1
+    stats.streakDays = 1;
+  }
+  // diffDays === 0 shouldn't happen (same-day check above)
+
+  stats.lastActiveDate = today;
+  saveStats(stats);
+}
+
+function getFavoriteMode() {
+  const stats = getStats();
+  const usage = stats.presetUsage || {};
+  const entries = Object.entries(usage);
+  if (entries.length === 0) return 'â€”';
+
+  entries.sort((a, b) => b[1] - a[1]);
+  const topPreset = entries[0][0];
+  return PRESET_LABELS[topPreset] || topPreset;
+}
+
+function renderDashboard() {
+  const stats = getStats();
+  els.statChats.textContent = stats.chatsCreated;
+  els.statMessages.textContent = stats.questionsAsked;
+  els.statCode.textContent = stats.codeBlocksSeen;
+  els.statStreak.textContent = stats.streakDays;
+  els.statFavMode.textContent = getFavoriteMode();
 }
 
 // ===== START =====
