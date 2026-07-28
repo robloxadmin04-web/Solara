@@ -1,0 +1,22 @@
+{
+  "name": "solara-ai",
+  "version": "1.0.0",
+  "description": "Solara AI - A minimal AI coding assistant powered by DeepSeek V3 and Gemini 2.0 Flash",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "coding-assistant",
+    "deepseek",
+    "gemini",
+    "vercel"
+  ],
+  "author": "robloxadmin04-web",
+  "license": "MIT"
+}
