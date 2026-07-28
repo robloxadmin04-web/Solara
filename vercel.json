@@ -1,16 +1,6 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [
-    { "source": "/", "destination": "/public/index.html" },
-    { "source": "/index.html", "destination": "/public/index.html" },
-    { "source": "/style.css", "destination": "/public/style.css" },
-    { "source": "/app.js", "destination": "/public/app.js" },
-    { "source": "/admin", "destination": "/public/admin.html" },
-    { "source": "/admin.html", "destination": "/public/admin.html" },
-    { "source": "/admin.css", "destination": "/public/admin.css" },
-    { "source": "/admin.js", "destination": "/public/admin.js" }
-  ],
   "headers": [
     {
       "source": "/api/(.*)",
@@ -21,7 +11,9 @@
     {
       "source": "/(.*)\\.(html|css|js)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Pragma", "value": "no-cache" },
+        { "key": "Expires", "value": "0" }
       ]
     }
   ]
