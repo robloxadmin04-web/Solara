@@ -42,6 +42,19 @@
 
       <div class="sidebar-footer">
         <div class="model-selector-wrapper">
+          <label class="section-title" for="presetSelect">Mode</label>
+          <div class="select-wrapper">
+            <select id="presetSelect" class="model-select">
+              <option value="general">General</option>
+              <option value="react">React Expert</option>
+              <option value="debugger">Debugger</option>
+              <option value="explainer">Explainer</option>
+              <option value="reviewer">Code Reviewer</option>
+            </select>
+            <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="model-selector-wrapper">
           <label class="section-title" for="modelSelect">Model</label>
           <div class="select-wrapper">
             <select id="modelSelect" class="model-select">
@@ -67,6 +80,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
         </button>
         <div class="topbar-title">
+          <span class="model-badge" id="presetBadge">General</span>
           <span class="model-badge" id="modelBadge">DeepSeek V3</span>
         </div>
         <button class="icon-btn" id="exportBtn" aria-label="Export chat" title="Export chat as Markdown">
