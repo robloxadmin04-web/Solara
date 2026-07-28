@@ -13,11 +13,7 @@
 </head>
 <body>
   <div class="app">
-    <!-- ============================================
-         SIDEBAR
-    ============================================ -->
     <aside class="sidebar" id="sidebar">
-      <!-- Header: Logo -->
       <div class="sidebar-header">
         <div class="logo">
           <div class="logo-icon" aria-hidden="true">
@@ -33,13 +29,11 @@
         </button>
       </div>
 
-      <!-- Primary Action: New Chat -->
       <button class="new-chat-btn" id="newChatBtn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         <span>New Conversation</span>
       </button>
 
-      <!-- Workspace Tools -->
       <div class="sidebar-group">
         <div class="section-title">Workspace</div>
         <div class="quick-tools">
@@ -61,13 +55,11 @@
         </div>
       </div>
 
-      <!-- Recent Conversations -->
       <div class="sidebar-section">
         <div class="section-title">Recent Conversations</div>
         <div class="chat-list" id="chatList"></div>
       </div>
 
-      <!-- Progress Dashboard -->
       <div class="dashboard-panel" id="dashboardPanel">
         <button class="dashboard-toggle" id="dashboardToggle" type="button">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -107,7 +99,6 @@
         </div>
       </div>
 
-      <!-- Settings and Account -->
       <div class="sidebar-footer">
         <div class="model-selector-wrapper">
           <label class="section-title" for="presetSelect">Assistant Mode</label>
@@ -118,16 +109,6 @@
               <option value="debugger">Debugger</option>
               <option value="explainer">Explainer</option>
               <option value="reviewer">Code Reviewer</option>
-            </select>
-            <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </div>
-        </div>
-        <div class="model-selector-wrapper">
-          <label class="section-title" for="modelSelect">AI Model</label>
-          <div class="select-wrapper">
-            <select id="modelSelect" class="model-select">
-              <option value="deepseek">DeepSeek V3</option>
-              <option value="gemini">Gemini 2.0 Flash</option>
             </select>
             <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
@@ -143,23 +124,18 @@
         <div class="footer-info">
           <span>Solara</span>
           <span class="dot">|</span>
-          <span>Version 2.0</span>
+          <span>Version 2.1</span>
         </div>
       </div>
     </aside>
 
-    <!-- ============================================
-         MAIN CONTENT AREA
-    ============================================ -->
     <main class="main">
-      <!-- Top Navigation Bar -->
       <header class="topbar">
         <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
         </button>
         <div class="topbar-title">
           <span class="model-badge" id="presetBadge">General</span>
-          <span class="model-badge" id="modelBadge">DeepSeek V3</span>
         </div>
         <div class="topbar-actions">
           <button class="icon-btn" id="exportBtn" aria-label="Export conversation" title="Export conversation as Markdown">
@@ -175,9 +151,7 @@
         </div>
       </header>
 
-      <!-- Chat Messages Container -->
       <div class="chat-container" id="chatContainer">
-        <!-- Welcome Screen (shown when no conversation is active) -->
         <div class="welcome-screen" id="welcomeScreen">
           <div class="welcome-logo" aria-hidden="true">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -235,11 +209,9 @@
           </div>
         </div>
 
-        <!-- Message List -->
         <div class="messages" id="messages"></div>
       </div>
 
-      <!-- Message Input Area -->
       <div class="input-area">
         <form class="input-form" id="chatForm">
           <div class="input-wrapper">
@@ -264,12 +236,8 @@
       </div>
     </main>
 
-    <!-- Sidebar Overlay (Mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- ============================================
-         LIVE CODE PLAYGROUND MODAL
-    ============================================ -->
     <div class="modal playground-modal" id="playgroundModal">
       <div class="modal-card playground-card">
         <div class="modal-header">
@@ -318,9 +286,6 @@
       </div>
     </div>
 
-    <!-- ============================================
-         EXPLAIN CODE MODAL
-    ============================================ -->
     <div class="modal explain-modal" id="explainModal">
       <div class="modal-card explain-card">
         <div class="modal-header">
@@ -353,9 +318,6 @@
       </div>
     </div>
 
-    <!-- ============================================
-         LOGIN MODAL
-    ============================================ -->
     <div class="login-modal" id="loginModal">
       <div class="login-card">
         <div class="login-logo" aria-hidden="true">
@@ -384,7 +346,6 @@
     </div>
   </div>
 
-  <!-- External Libraries: Markdown Parser and Syntax Highlighting -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script src="app.js"></script>
