@@ -1,12 +1,12 @@
-// ===== SOLARA AI - Frontend Logic v7 =====
-// Batch 1: Live Playground + Explain Code + Progress Dashboard
+// ===== SOLARA AI - Frontend Logic v8 =====
+// AI Model selector removed - backend auto-rotates through all providers
 
 // ===== STATE =====
 const state = {
   messages: [],
   chats: JSON.parse(localStorage.getItem('solara_chats') || '[]'),
   currentChatId: null,
-  currentModel: localStorage.getItem('solara_model') || 'deepseek',
+  currentModel: 'gemini', // hardcoded - backend auto-rotates all providers anyway
   currentPreset: localStorage.getItem('solara_preset') || 'general',
   isLoading: false,
   authToken: localStorage.getItem('solara_token') || null,
@@ -23,8 +23,6 @@ const els = {
   sidebarClose: document.getElementById('sidebarClose'),
   newChatBtn: document.getElementById('newChatBtn'),
   chatList: document.getElementById('chatList'),
-  modelSelect: document.getElementById('modelSelect'),
-  modelBadge: document.getElementById('modelBadge'),
   presetSelect: document.getElementById('presetSelect'),
   presetBadge: document.getElementById('presetBadge'),
   clearBtn: document.getElementById('clearBtn'),
@@ -73,13 +71,13 @@ const els = {
 
 // ===== SVG ICONS =====
 const ICONS = {
-  user: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
-  assistant: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
-  chat: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`,
-  copy: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`,
-  check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  trash: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`,
-  play: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  user: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  assistant: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  chat: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+  copy: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+  check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  trash: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>',
+  play: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
 };
 
 // ===== MARKED CONFIG =====
@@ -97,11 +95,6 @@ marked.setOptions({
 });
 
 // ===== LABELS =====
-const MODEL_LABELS = {
-  deepseek: 'DeepSeek V3',
-  gemini: 'Gemini 2.0 Flash',
-};
-
 const PRESET_LABELS = {
   general: 'General',
   react: 'React Expert',
@@ -113,8 +106,6 @@ const PRESET_LABELS = {
 
 // ===== INIT =====
 function init() {
-  els.modelSelect.value = state.currentModel;
-  els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
   els.presetSelect.value = state.currentPreset;
   els.presetBadge.textContent = PRESET_LABELS[state.currentPreset];
   renderChatList();
@@ -126,7 +117,13 @@ function init() {
   autoResizeTextarea();
   updateStreak();
   renderDashboard();
+  cleanupOldStorage();
   checkAuth();
+}
+
+// One-time cleanup of the old model preference key
+function cleanupOldStorage() {
+  localStorage.removeItem('solara_model');
 }
 
 // ===== AUTH =====
@@ -180,7 +177,7 @@ async function handleLogin(e) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
+      throw new Error(data.error || 'HTTP ' + response.status);
     }
 
     if (!data.token || !data.expiresAt) {
@@ -198,7 +195,7 @@ async function handleLogin(e) {
     els.loginPassword.select();
   } finally {
     els.loginBtn.disabled = false;
-    els.loginBtn.innerHTML = '<span class="login-btn-text">Sign in</span>';
+    els.loginBtn.innerHTML = '<span class="login-btn-text">Sign In</span>';
   }
 }
 
@@ -220,7 +217,7 @@ function attachEventListeners() {
 
   els.clearBtn.addEventListener('click', () => {
     if (state.messages.length === 0 && !state.currentChatId) return;
-    if (confirm('Delete this chat? This cannot be undone.')) {
+    if (confirm('Delete this conversation? This cannot be undone.')) {
       if (state.currentChatId) {
         state.chats = state.chats.filter((c) => c.id !== state.currentChatId);
         localStorage.setItem('solara_chats', JSON.stringify(state.chats));
@@ -230,12 +227,6 @@ function attachEventListeners() {
   });
 
   els.exportBtn.addEventListener('click', exportChatAsMarkdown);
-
-  els.modelSelect.addEventListener('change', (e) => {
-    state.currentModel = e.target.value;
-    localStorage.setItem('solara_model', state.currentModel);
-    els.modelBadge.textContent = MODEL_LABELS[state.currentModel];
-  });
 
   els.presetSelect.addEventListener('change', (e) => {
     state.currentPreset = e.target.value;
@@ -263,7 +254,6 @@ function attachEventListeners() {
     });
   });
 
-  // ESC key closes any open modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (els.playgroundModal.classList.contains('active')) closePlayground();
@@ -354,22 +344,20 @@ function saveCurrentChat() {
 
 function renderChatList() {
   if (state.chats.length === 0) {
-    els.chatList.innerHTML = '<div class="chat-item-empty">No recent chats</div>';
+    els.chatList.innerHTML = '<div class="chat-item-empty">No recent conversations</div>';
     return;
   }
 
   els.chatList.innerHTML = state.chats
-    .map(
-      (chat) => `
-    <div class="chat-item ${chat.id === state.currentChatId ? 'active' : ''}" data-id="${chat.id}">
-      ${ICONS.chat}
-      <span class="chat-item-title">${escapeHtml(chat.title)}</span>
-      <button class="chat-item-delete" data-delete-id="${chat.id}" aria-label="Delete chat" title="Delete chat">
-        ${ICONS.trash}
-      </button>
-    </div>
-  `
-    )
+    .map((chat) => (
+      '<div class="chat-item ' + (chat.id === state.currentChatId ? 'active' : '') + '" data-id="' + chat.id + '">' +
+        ICONS.chat +
+        '<span class="chat-item-title">' + escapeHtml(chat.title) + '</span>' +
+        '<button class="chat-item-delete" data-delete-id="' + chat.id + '" aria-label="Delete chat" title="Delete chat">' +
+          ICONS.trash +
+        '</button>' +
+      '</div>'
+    ))
     .join('');
 
   els.chatList.querySelectorAll('.chat-item').forEach((item) => {
@@ -389,7 +377,7 @@ function renderChatList() {
 }
 
 function deleteChat(chatId) {
-  if (!confirm('Delete this chat? This cannot be undone.')) return;
+  if (!confirm('Delete this conversation? This cannot be undone.')) return;
   state.chats = state.chats.filter((c) => c.id !== chatId);
   localStorage.setItem('solara_chats', JSON.stringify(state.chats));
   if (state.currentChatId === chatId) {
@@ -445,7 +433,7 @@ async function handleSubmit(e) {
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `HTTP ${response.status}`);
+      throw new Error(errData.error || 'HTTP ' + response.status);
     }
 
     const data = await response.json();
@@ -478,23 +466,22 @@ function addMessage(role, content) {
 
 function appendMessageToDOM(role, content) {
   const msgEl = document.createElement('div');
-  msgEl.className = `message ${role}`;
+  msgEl.className = 'message ' + role;
 
   const avatarIcon = role === 'user' ? ICONS.user : ICONS.assistant;
-  const roleName = role === 'user' ? 'You' : MODEL_LABELS[state.currentModel];
+  const roleName = role === 'user' ? 'You' : 'Solara';
 
   const renderedContent =
     role === 'assistant'
       ? renderMarkdown(content)
-      : `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
+      : '<p>' + escapeHtml(content).replace(/\n/g, '<br>') + '</p>';
 
-  msgEl.innerHTML = `
-    <div class="avatar">${avatarIcon}</div>
-    <div class="message-content">
-      <div class="message-role">${roleName}</div>
-      <div class="message-text">${renderedContent}</div>
-    </div>
-  `;
+  msgEl.innerHTML =
+    '<div class="avatar">' + avatarIcon + '</div>' +
+    '<div class="message-content">' +
+      '<div class="message-role">' + roleName + '</div>' +
+      '<div class="message-text">' + renderedContent + '</div>' +
+    '</div>';
 
   els.messages.appendChild(msgEl);
 
@@ -505,7 +492,7 @@ function renderMarkdown(text) {
   try {
     return marked.parse(text);
   } catch (e) {
-    return `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+    return '<p>' + escapeHtml(text).replace(/\n/g, '<br>') + '</p>';
   }
 }
 
@@ -524,48 +511,46 @@ function enhanceCodeBlock(pre) {
   header.className = 'code-block-header';
 
   const actions = isRunnable
-    ? `
-      <div class="code-block-actions">
-        <button class="playground-btn" type="button" title="Open in Playground">
-          ${ICONS.play}
-          <span>Playground</span>
-        </button>
-        <button class="copy-btn" type="button">
-          ${ICONS.copy}
-          <span>Copy</span>
-        </button>
-      </div>
-    `
-    : `
-      <div class="code-block-actions">
-        <button class="copy-btn" type="button">
-          ${ICONS.copy}
-          <span>Copy</span>
-        </button>
-      </div>
-    `;
+    ? (
+        '<div class="code-block-actions">' +
+          '<button class="playground-btn" type="button" title="Open in Playground">' +
+            ICONS.play +
+            '<span>Playground</span>' +
+          '</button>' +
+          '<button class="copy-btn" type="button">' +
+            ICONS.copy +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>'
+      )
+    : (
+        '<div class="code-block-actions">' +
+          '<button class="copy-btn" type="button">' +
+            ICONS.copy +
+            '<span>Copy</span>' +
+          '</button>' +
+        '</div>'
+      );
 
-  header.innerHTML = `<span class="code-lang">${lang}</span>${actions}`;
+  header.innerHTML = '<span class="code-lang">' + lang + '</span>' + actions;
 
   pre.parentNode.insertBefore(wrapper, pre);
   wrapper.appendChild(header);
   wrapper.appendChild(pre);
 
-  // Copy handler
   const copyBtn = header.querySelector('.copy-btn');
   copyBtn.addEventListener('click', () => {
     const text = code.textContent;
     navigator.clipboard.writeText(text).then(() => {
       copyBtn.classList.add('copied');
-      copyBtn.innerHTML = `${ICONS.check}<span>Copied</span>`;
+      copyBtn.innerHTML = ICONS.check + '<span>Copied</span>';
       setTimeout(() => {
         copyBtn.classList.remove('copied');
-        copyBtn.innerHTML = `${ICONS.copy}<span>Copy</span>`;
+        copyBtn.innerHTML = ICONS.copy + '<span>Copy</span>';
       }, 2000);
     });
   });
 
-  // Playground handler (only for runnable code)
   if (isRunnable) {
     const pgBtn = header.querySelector('.playground-btn');
     pgBtn.addEventListener('click', () => {
@@ -584,26 +569,24 @@ function exportChatAsMarkdown() {
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10);
   const timeStr = now.toTimeString().slice(0, 5);
-  const modelName = MODEL_LABELS[state.currentModel];
 
-  let md = `# Solara AI Chat Export\n\n`;
-  md += `- **Date:** ${dateStr} ${timeStr}\n`;
-  md += `- **Model:** ${modelName}\n`;
-  md += `- **Messages:** ${state.messages.length}\n\n`;
-  md += `---\n\n`;
+  let md = '# Solara AI Conversation Export\n\n';
+  md += '- Date: ' + dateStr + ' ' + timeStr + '\n';
+  md += '- Messages: ' + state.messages.length + '\n\n';
+  md += '---\n\n';
 
   state.messages.forEach((msg, i) => {
-    const role = msg.role === 'user' ? 'You' : modelName;
-    md += `## ${role}\n\n`;
-    md += `${msg.content}\n\n`;
+    const role = msg.role === 'user' ? 'You' : 'Solara';
+    md += '## ' + role + '\n\n';
+    md += msg.content + '\n\n';
     if (i < state.messages.length - 1) {
-      md += `---\n\n`;
+      md += '---\n\n';
     }
   });
 
-  md += `\n---\n\n_Exported from Solara AI Â· ${dateStr}_\n`;
+  md += '\n---\n\n_Exported from Solara AI on ' + dateStr + '_\n';
 
-  const filename = `solara-chat-${dateStr}-${timeStr.replace(':', '')}.md`;
+  const filename = 'solara-chat-' + dateStr + '-' + timeStr.replace(':', '') + '.md';
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -621,19 +604,18 @@ function showTypingIndicator() {
   const msgEl = document.createElement('div');
   msgEl.className = 'message assistant';
   msgEl.id = id;
-  msgEl.innerHTML = `
-    <div class="avatar">${ICONS.assistant}</div>
-    <div class="message-content">
-      <div class="message-role">${MODEL_LABELS[state.currentModel]}</div>
-      <div class="message-text">
-        <div class="typing-indicator">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-        </div>
-      </div>
-    </div>
-  `;
+  msgEl.innerHTML =
+    '<div class="avatar">' + ICONS.assistant + '</div>' +
+    '<div class="message-content">' +
+      '<div class="message-role">Solara</div>' +
+      '<div class="message-text">' +
+        '<div class="typing-indicator">' +
+          '<div class="typing-dot"></div>' +
+          '<div class="typing-dot"></div>' +
+          '<div class="typing-dot"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   els.messages.appendChild(msgEl);
   scrollToBottom();
   return id;
@@ -666,10 +648,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// =====================================================
-// ===== FEATURE 1: LIVE CODE PLAYGROUND =====
-// =====================================================
-
+// ===== LIVE CODE PLAYGROUND =====
 const PG_STORAGE_KEY = 'solara_playground';
 
 function attachPlaygroundListeners() {
@@ -681,24 +660,19 @@ function attachPlaygroundListeners() {
   els.playgroundRunBtn.addEventListener('click', runPlayground);
   els.playgroundResetBtn.addEventListener('click', resetPlayground);
 
-  // Tab switching
   document.querySelectorAll('.playground-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
-      const tabName = tab.getAttribute('data-tab');
-      switchPlaygroundTab(tabName);
+      switchPlaygroundTab(tab.getAttribute('data-tab'));
     });
   });
 
-  // Autosave on edit
   [els.pgHtml, els.pgCss, els.pgJs].forEach((editor) => {
     editor.addEventListener('input', savePlaygroundState);
     editor.addEventListener('keydown', (e) => {
-      // Ctrl/Cmd + Enter to run
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         runPlayground();
       }
-      // Tab to indent
       if (e.key === 'Tab') {
         e.preventDefault();
         const start = editor.selectionStart;
@@ -710,7 +684,6 @@ function attachPlaygroundListeners() {
     });
   });
 
-  // Restore saved code on load
   restorePlaygroundState();
 }
 
@@ -725,8 +698,6 @@ function closePlayground() {
 
 function openPlaygroundWithCode(lang, code) {
   openPlayground();
-
-  // Fill in the appropriate editor
   if (lang === 'html') {
     els.pgHtml.value = code;
     switchPlaygroundTab('html');
@@ -737,7 +708,6 @@ function openPlaygroundWithCode(lang, code) {
     els.pgJs.value = code;
     switchPlaygroundTab('js');
   }
-
   savePlaygroundState();
   setTimeout(() => runPlayground(), 100);
 }
@@ -756,24 +726,11 @@ function runPlayground() {
   const css = els.pgCss.value || '';
   const js = els.pgJs.value || '';
 
-  const combined = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<style>${css}</style>
-</head>
-<body>
-${html}
-<script>
-try {
-${js}
-} catch(err) {
-document.body.innerHTML += '<div style="background:#fee;color:#c00;padding:10px;margin:10px 0;border-radius:6px;font-family:monospace;font-size:12px;border:1px solid #fcc;">Error: ' + err.message + '</div>';
-}
-<\/script>
-</body>
-</html>`;
+  const combined =
+    '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>' + css + '</style></head><body>' +
+    html +
+    '<script>try{' + js + '}catch(err){document.body.innerHTML+=\'<div style="background:#fee;color:#c00;padding:10px;margin:10px 0;border-radius:6px;font-family:monospace;font-size:12px;border:1px solid #fcc;">Error: \'+err.message+\'</div>\';}<\/script>' +
+    '</body></html>';
 
   els.pgPreview.srcdoc = combined;
 }
@@ -788,13 +745,13 @@ function resetPlayground() {
 }
 
 function savePlaygroundState() {
-  const state = {
+  const s = {
     html: els.pgHtml.value,
     css: els.pgCss.value,
     js: els.pgJs.value,
   };
   try {
-    localStorage.setItem(PG_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(PG_STORAGE_KEY, JSON.stringify(s));
   } catch (e) {}
 }
 
@@ -807,10 +764,7 @@ function restorePlaygroundState() {
   } catch (e) {}
 }
 
-// =====================================================
-// ===== FEATURE 2: EXPLAIN CODE =====
-// =====================================================
-
+// ===== EXPLAIN CODE =====
 function attachExplainListeners() {
   els.openExplainBtn.addEventListener('click', () => {
     openExplain();
@@ -823,7 +777,6 @@ function attachExplainListeners() {
   });
   els.explainSubmitBtn.addEventListener('click', submitExplainRequest);
 
-  // Ctrl/Cmd + Enter to submit
   els.explainInput.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -848,44 +801,31 @@ async function submitExplainRequest() {
     return;
   }
 
-  // Close the modal
   closeExplain();
 
-  // Switch to explain-code preset (temporarily for this message)
   const originalPreset = state.currentPreset;
   state.currentPreset = 'explain-code';
 
-  // Start a new chat for the explanation
   startNewChat();
 
-  // Build the message
-  const userMessage = `I-explain mo yung code na 'to line-by-line:\n\n\`\`\`\n${code}\n\`\`\``;
-
+  const userMessage = 'Please explain this code line-by-line:\n\n\`\`\`\n' + code + '\n\`\`\`';
   els.userInput.value = userMessage;
   els.welcomeScreen.style.display = 'none';
 
-  // Trigger send
   els.chatForm.dispatchEvent(new Event('submit'));
 
-  // Restore preset after a short delay
   setTimeout(() => {
     state.currentPreset = originalPreset;
     els.presetSelect.value = originalPreset;
     els.presetBadge.textContent = PRESET_LABELS[originalPreset];
   }, 500);
 
-  // Clear the explain input
   els.explainInput.value = '';
 }
 
-// =====================================================
-// ===== FEATURE 3: PROGRESS DASHBOARD =====
-// =====================================================
-
+// ===== PROGRESS DASHBOARD =====
 function attachDashboardListeners() {
   els.dashboardToggle.addEventListener('click', toggleDashboard);
-
-  // Apply saved expanded state
   if (state.dashboardExpanded) {
     els.dashboardPanel.classList.add('expanded');
   }
@@ -931,10 +871,8 @@ function trackQuestionAsked() {
 }
 
 function trackCodeBlocks(replyText) {
-  // Count code blocks in the assistant's reply
   const matches = replyText.match(/```[\s\S]*?```/g) || [];
   if (matches.length === 0) return;
-
   const stats = getStats();
   stats.codeBlocksSeen += matches.length;
   saveStats(stats);
@@ -951,35 +889,26 @@ function trackPresetUse(preset) {
 
 function updateStreak() {
   const stats = getStats();
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = new Date().toISOString().slice(0, 10);
 
   if (!stats.lastActiveDate) {
-    // First visit
     stats.streakDays = 1;
     stats.lastActiveDate = today;
     saveStats(stats);
     return;
   }
 
-  if (stats.lastActiveDate === today) {
-    // Already counted today
-    return;
-  }
+  if (stats.lastActiveDate === today) return;
 
-  // Check if last active was yesterday
   const lastDate = new Date(stats.lastActiveDate);
   const todayDate = new Date(today);
-  const diffMs = todayDate - lastDate;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 1) {
-    // Consecutive day â€” extend streak
     stats.streakDays += 1;
   } else if (diffDays > 1) {
-    // Streak broken â€” reset to 1
     stats.streakDays = 1;
   }
-  // diffDays === 0 shouldn't happen (same-day check above)
 
   stats.lastActiveDate = today;
   saveStats(stats);
@@ -989,11 +918,9 @@ function getFavoriteMode() {
   const stats = getStats();
   const usage = stats.presetUsage || {};
   const entries = Object.entries(usage);
-  if (entries.length === 0) return 'â€”';
-
+  if (entries.length === 0) return 'None yet';
   entries.sort((a, b) => b[1] - a[1]);
-  const topPreset = entries[0][0];
-  return PRESET_LABELS[topPreset] || topPreset;
+  return PRESET_LABELS[entries[0][0]] || entries[0][0];
 }
 
 function renderDashboard() {
