@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Solara AI - A professional coding assistant for HTML, CSS, and JavaScript." />
+  <title>Solara AI</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  
+  
+  <style type="text/css">@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/greek-ext/wght/normal.woff2);unicode-range:U+1F00-1FFF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:400;src:url(/cf-fonts/v/inter/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/greek-ext/wght/normal.woff2);unicode-range:U+1F00-1FFF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:500;src:url(/cf-fonts/v/inter/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:600;src:url(/cf-fonts/v/inter/5.2.8/greek-ext/wght/normal.woff2);unicode-range:U+1F00-1FFF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/greek-ext/wght/normal.woff2);unicode-range:U+1F00-1FFF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:Inter;font-style:normal;font-weight:700;src:url(/cf-fonts/v/inter/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:400;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/greek/wght/normal.woff2);unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/cyrillic/wght/normal.woff2);unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/latin-ext/wght/normal.woff2);unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/vietnamese/wght/normal.woff2);unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/cyrillic-ext/wght/normal.woff2);unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;font-display:swap;}@font-face {font-family:JetBrains Mono;font-style:normal;font-weight:500;src:url(/cf-fonts/v/jetbrains-mono/5.2.8/latin/wght/normal.woff2);unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;font-display:swap;}</style>
+
+  <!-- ===== CHAT ROOM STYLES ===== -->
+  <style>
+    /* Chat Room button in topbar */
+    .chatroom-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+      font-family: inherit;
+    }
+    .chatroom-btn:hover, .chatroom-btn:active { background: #2563eb; }
+    .chatroom-btn svg { flex-shrink: 0; }
+    .chatroom-btn-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 18px;
+      height: 18px;
+      background: #ef4444;
+      color: white;
+      border-radius: 9px;
+      font-size: 10px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+    }
+    .chatroom-btn-badge.active { display: flex; }
+
+    /* Chat Room Modal */
+    .cr-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .cr-modal.active { display: flex; }
+
+    .cr-card {
+      width: 100%;
+      max-width: 500px;
+      height: 100%;
+      max-height: 700px;
+      background: #0a0a0a;
+      border: 1px solid #262626;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Name prompt inside modal */
+    .cr-name-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+    }
+    .cr-name-inner { width: 100%; text-align: center; }
+    .cr-name-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #f5f5f5;
+      letter-spacing: -0.02em;
+    }
+    .cr-name-subtitle {
+      font-size: 13px;
+      color: #a3a3a3;
+      margin-bottom: 20px;
+    }
+    .cr-name-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #1a1a1a;
+      border: 1px solid #262626;
+      border-radius: 8px;
+      color: #f5f5f5;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 10px;
+    }
+    .cr-name-input:focus { border-color: #555; }
+    .cr-name-btn {
+      width: 100%;
+      padding: 12px;
+      background: #fff;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .cr-name-btn:disabled { opacity: 0.5; }
+    .cr-name-error {
+      color: #f87171;
+      font-size: 12px;
+      margin-top: 10px;
+      min-height: 16px;
+    }
+
+    /* Chat room */
+    .cr-room { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .cr-room.active { display: flex; }
+
+    .cr-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid #262626;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #111;
+      flex-shrink: 0;
+    }
+    .cr-header-title { font-size: 15px; font-weight: 600; color: #f5f5f5; }
+    .cr-header-info { font-size: 11px; color: #a3a3a3; margin-top: 2px; }
+    .cr-header-actions { display: flex; gap: 6px; }
+    .cr-header-btn {
+      padding: 6px 10px;
+      background: transparent;
+      color: #a3a3a3;
+      border: 1px solid #262626;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .cr-header-btn:active { background: #1a1a1a; }
+
+    .cr-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .cr-msg { display: flex; flex-direction: column; max-width: 80%; }
+    .cr-msg.mine { align-self: flex-end; align-items: flex-end; }
+    .cr-msg.other { align-self: flex-start; align-items: flex-start; }
+    .cr-msg.system { align-self: center; align-items: center; max-width: 90%; }
+
+    .cr-msg-name {
+      font-size: 11px;
+      color: #a3a3a3;
+      margin-bottom: 3px;
+      padding: 0 4px;
+      font-weight: 600;
+    }
+    .cr-msg-bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      color: #f5f5f5;
+    }
+    .cr-msg.mine .cr-msg-bubble {
+      background: #3b82f6;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .cr-msg.other .cr-msg-bubble {
+      background: #1a1a1a;
+      border: 1px solid #262626;
+      border-bottom-left-radius: 4px;
+    }
+    .cr-msg.system .cr-msg-bubble {
+      background: transparent;
+      color: #737373;
+      font-size: 11px;
+      font-style: italic;
+      padding: 4px 12px;
+    }
+    .cr-msg-time {
+      font-size: 10px;
+      color: #525252;
+      margin-top: 3px;
+      padding: 0 4px;
+    }
+
+    .cr-empty {
+      text-align: center;
+      color: #a3a3a3;
+      padding: 40px 20px;
+      font-size: 13px;
+    }
+
+    .cr-input-area {
+      padding: 12px;
+      border-top: 1px solid #262626;
+      display: flex;
+      gap: 8px;
+      background: #111;
+      flex-shrink: 0;
+    }
+    .cr-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: #1a1a1a;
+      border: 1px solid #262626;
+      border-radius: 20px;
+      color: #f5f5f5;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      max-height: 100px;
+      min-height: 40px;
+      line-height: 1.3;
+    }
+    .cr-input:focus { border-color: #555; }
+    .cr-send-btn {
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .cr-send-btn:disabled { opacity: 0.4; }
+
+    @media (max-width: 640px) {
+      .cr-modal { padding: 0; }
+      .cr-card { max-width: 100%; max-height: 100%; border-radius: 0; border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </div>
+          <span class="logo-text">Solara</span>
+        </div>
+        <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <button class="new-chat-btn" id="newChatBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>New Conversation</span>
+      </button>
+
+      <div class="sidebar-group">
+        <div class="section-title">Workspace</div>
+        <div class="quick-tools">
+          <button class="tool-btn" id="openPlaygroundBtn" title="Open the live code playground">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span>Code Playground</span>
+          </button>
+          <button class="tool-btn" id="openExplainBtn" title="Paste code to receive a detailed explanation">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Explain Code</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="section-title">Recent Conversations</div>
+        <div class="chat-list" id="chatList"></div>
+      </div>
+
+      <div class="dashboard-panel" id="dashboardPanel">
+        <button class="dashboard-toggle" id="dashboardToggle" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3v18h18"/>
+            <path d="M7 12l4-4 4 4 5-5"/>
+          </svg>
+          <span>Learning Progress</span>
+          <svg class="dashboard-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="dashboard-body" id="dashboardBody">
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-value" id="statChats">0</div>
+              <div class="stat-label">Sessions</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="statMessages">0</div>
+              <div class="stat-label">Questions</div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat">
+              <div class="stat-value" id="statCode">0</div>
+              <div class="stat-label">Examples</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value" id="statStreak">0</div>
+              <div class="stat-label">Day Streak</div>
+            </div>
+          </div>
+          <div class="stat-fav">
+            <div class="stat-label">Preferred Mode</div>
+            <div class="stat-fav-value" id="statFavMode">None yet</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="model-selector-wrapper">
+          <label class="section-title" for="presetSelect">Assistant Mode</label>
+          <div class="select-wrapper">
+            <select id="presetSelect" class="model-select">
+              <option value="general">General</option>
+              <option value="react">React Expert</option>
+              <option value="debugger">Debugger</option>
+              <option value="explainer">Explainer</option>
+              <option value="reviewer">Code Reviewer</option>
+            </select>
+            <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign Out</span>
+        </button>
+        <div class="footer-info">
+          <span>Solara</span>
+          <span class="dot">|</span>
+          <span>Version 2.2</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div class="topbar-title">
+          <span class="model-badge" id="presetBadge">General</span>
+        </div>
+        <div class="topbar-actions">
+          <!-- ===== CHAT ROOM BUTTON (nasa topbar) ===== -->
+          <button class="chatroom-btn" id="openChatroomBtn" title="Open the community chat room">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+            <span>Chat Room</span>
+            <span class="chatroom-btn-badge" id="chatroomBtnBadge">0</span>
+          </button>
+          <button class="icon-btn" id="exportBtn" aria-label="Export conversation" title="Export conversation as Markdown">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="clearBtn" aria-label="Delete conversation" title="Delete conversation">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="chat-container" id="chatContainer">
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+          </div>
+          <h1 class="welcome-title">Welcome to Solara</h1>
+          <p class="welcome-subtitle">A patient coding assistant for HTML, CSS, and JavaScript. Ask a question or select a starting point below.</p>
+
+          <div class="suggestion-section">
+            <div class="suggestion-heading">Suggested Starting Points</div>
+            <div class="suggestion-grid">
+              <button class="suggestion-card" data-prompt="Teach me the fundamentals of HTML. I am a complete beginner.">
+                <div class="suggestion-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16v16H4z"/>
+                    <path d="M4 9h16"/>
+                  </svg>
+                </div>
+                <div class="suggestion-title">HTML Fundamentals</div>
+                <div class="suggestion-desc">Start with the basics of web structure</div>
+              </button>
+              <button class="suggestion-card" data-prompt="Explain how to create an interactive button that displays an alert when clicked.">
+                <div class="suggestion-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 12h8"/>
+                  </svg>
+                </div>
+                <div class="suggestion-title">Interactive Elements</div>
+                <div class="suggestion-desc">Combine HTML, CSS, and JavaScript</div>
+              </button>
+              <button class="suggestion-card" data-prompt="Explain the difference between var, let, and const in JavaScript, with clear examples.">
+                <div class="suggestion-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+                    <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+                  </svg>
+                </div>
+                <div class="suggestion-title">JavaScript Variables</div>
+                <div class="suggestion-desc">Understand var, let, and const</div>
+              </button>
+              <button class="suggestion-card" data-prompt="Show me how to center an element on a page using CSS Flexbox.">
+                <div class="suggestion-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <rect x="9" y="9" width="6" height="6"/>
+                  </svg>
+                </div>
+                <div class="suggestion-title">CSS Flexbox</div>
+                <div class="suggestion-desc">Master modern layout techniques</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+      </div>
+
+      <div class="input-area">
+        <form class="input-form" id="chatForm">
+          <div class="input-wrapper">
+            <textarea
+              id="userInput"
+              class="user-input"
+              placeholder="Ask a question or paste code for review..."
+              rows="1"
+              autocomplete="off"
+            ></textarea>
+            <button type="submit" class="send-btn" id="sendBtn" aria-label="Send message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="input-hint">
+            Press <kbd>Enter</kbd> to send. Use <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line.
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="modal playground-modal" id="playgroundModal">
+      <div class="modal-card playground-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span>Code Playground</span>
+          </div>
+          <div class="modal-header-actions">
+            <button class="modal-action-btn primary" id="playgroundRunBtn" title="Run the code (Ctrl + Enter)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Run</span>
+            </button>
+            <button class="modal-action-btn" id="playgroundResetBtn" title="Clear all editors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1015-6.7L21 8"/>
+                <path d="M21 3v5h-5"/>
+              </svg>
+              <span>Reset</span>
+            </button>
+            <button class="icon-btn modal-close" id="playgroundCloseBtn" aria-label="Close playground">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="playground-body">
+          <div class="playground-editors">
+            <div class="playground-tabs">
+              <button class="playground-tab active" data-tab="html">HTML</button>
+              <button class="playground-tab" data-tab="css">CSS</button>
+              <button class="playground-tab" data-tab="js">JavaScript</button>
+            </div>
+            <textarea class="playground-editor active" id="pgHtml" data-tab="html" spellcheck="false" placeholder="Write your HTML markup here..."></textarea>
+            <textarea class="playground-editor" id="pgCss" data-tab="css" spellcheck="false" placeholder="Write your CSS styles here..."></textarea>
+            <textarea class="playground-editor" id="pgJs" data-tab="js" spellcheck="false" placeholder="Write your JavaScript here..."></textarea>
+          </div>
+          <div class="playground-preview-wrapper">
+            <div class="playground-preview-label">Live Preview</div>
+            <iframe class="playground-preview" id="pgPreview" title="Live preview" sandbox="allow-scripts allow-modals"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal explain-modal" id="explainModal">
+      <div class="modal-card explain-card">
+        <div class="modal-header">
+          <div class="modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Explain Code</span>
+          </div>
+          <button class="icon-btn modal-close" id="explainCloseBtn" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="explain-body">
+          <p class="explain-hint">Paste the code you would like explained. Solara will break it down line by line in clear, accessible language.</p>
+          <textarea class="explain-input" id="explainInput" spellcheck="false" placeholder="Paste your HTML, CSS, or JavaScript code here..."></textarea>
+          <div class="explain-actions">
+            <button class="secondary-btn" id="explainClearBtn" type="button">Clear</button>
+            <button class="primary-btn" id="explainSubmitBtn" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Explain This Code</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-modal" id="loginModal">
+      <div class="login-card">
+        <div class="login-logo" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </div>
+        <h2 class="login-title">Sign in to Solara</h2>
+        <p class="login-subtitle">Enter your access password to continue.</p>
+        <form class="login-form" id="loginForm">
+          <input
+            type="password"
+            id="loginPassword"
+            class="login-input"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+          />
+          <button type="submit" class="login-btn" id="loginBtn">
+            <span class="login-btn-text">Sign In</span>
+          </button>
+          <div class="login-error" id="loginError"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHAT ROOM MODAL ===== -->
+  <div class="cr-modal" id="chatroomModal">
+    <div class="cr-card">
+      <!-- Name Prompt -->
+      <div class="cr-name-screen" id="crNameScreen">
+        <div class="cr-name-inner">
+          <div class="cr-name-title">Community Chat</div>
+          <div class="cr-name-subtitle">Enter your name to join the room</div>
+          <form id="crNameForm">
+            <input
+              type="text"
+              id="crNameInput"
+              class="cr-name-input"
+              placeholder="Your name"
+              maxlength="30"
+              autocomplete="off"
+              required
+            />
+            <button type="submit" class="cr-name-btn" id="crJoinBtn">Join Chat</button>
+            <div class="cr-name-error" id="crNameError"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Chat Room -->
+      <div class="cr-room" id="crRoom">
+        <div class="cr-header">
+          <div>
+            <div class="cr-header-title">Community Chat</div>
+            <div class="cr-header-info" id="crUserInfo">You are: —</div>
+          </div>
+          <div class="cr-header-actions">
+            <button class="cr-header-btn" id="crLeaveBtn">Leave</button>
+            <button class="cr-header-btn" id="crCloseBtn">Close</button>
+          </div>
+        </div>
+
+        <div class="cr-messages" id="crMessages">
+          <div class="cr-empty">Loading messages...</div>
+        </div>
+
+        <form class="cr-input-area" id="crChatForm">
+          <textarea
+            id="crInput"
+            class="cr-input"
+            placeholder="Type a message..."
+            rows="1"
+            autocomplete="off"
+          ></textarea>
+          <button type="submit" class="cr-send-btn" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="app.js"></script>
+
+  <!-- ===== CHAT ROOM SCRIPT ===== -->
+  <script>
+  (function() {
+    // ===== CONFIG - PALITAN MO ITO =====
+    const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY-HERE';
+    const ROOM_TABLE = 'room_messages';
+    // ====================================
+
+    const crState = {
+      userId: localStorage.getItem('cr_user_id') || null,
+      userName: localStorage.getItem('cr_user_name') || null,
+      messages: [],
+      lastId: 0,
+      poll: null,
+      isOpen: false,
+      unread: 0,
+    };
+
+    const crEls = {
+      modal: document.getElementById('chatroomModal'),
+      openBtn: document.getElementById('openChatroomBtn'),
+      badge: document.getElementById('chatroomBtnBadge'),
+      nameScreen: document.getElementById('crNameScreen'),
+      nameForm: document.getElementById('crNameForm'),
+      nameInput: document.getElementById('crNameInput'),
+      joinBtn: document.getElementById('crJoinBtn'),
+      nameError: document.getElementById('crNameError'),
+      room: document.getElementById('crRoom'),
+      userInfo: document.getElementById('crUserInfo'),
+      leaveBtn: document.getElementById('crLeaveBtn'),
+      closeBtn: document.getElementById('crCloseBtn'),
+      messages: document.getElementById('crMessages'),
+      chatForm: document.getElementById('crChatForm'),
+      input: document.getElementById('crInput'),
+    };
+
+    async function sb(path, options) {
+      options = options || {};
+      const response = await fetch(SUPABASE_URL + '/rest/v1/' + path, Object.assign({}, options, {
+        headers: Object.assign({
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Prefer': options.method === 'POST' ? 'return=representation' : '',
+        }, options.headers || {}),
+      }));
+      if (!response.ok) {
+        const t = await response.text();
+        throw new Error('Supabase ' + response.status + ': ' + t.slice(0, 200));
+      }
+      const t = await response.text();
+      return t ? JSON.parse(t) : null;
+    }
+
+    function crEscape(text) {
+      const d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    function crFormatTime(iso) {
+      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function crOpen() {
+      crState.isOpen = true;
+      crEls.modal.classList.add('active');
+      crState.unread = 0;
+      crEls.badge.classList.remove('active');
+      if (crState.userId && crState.userName) {
+        crShowRoom();
+      } else {
+        crShowNamePrompt();
+      }
+    }
+
+    function crClose() {
+      crState.isOpen = false;
+      crEls.modal.classList.remove('active');
+    }
+
+    function crShowNamePrompt() {
+      crEls.nameScreen.style.display = 'flex';
+      crEls.room.classList.remove('active');
+      setTimeout(function() { crEls.nameInput.focus(); }, 100);
+    }
+
+    function crShowRoom() {
+      crEls.nameScreen.style.display = 'none';
+      crEls.room.classList.add('active');
+      crEls.userInfo.textContent = 'You are: ' + crState.userName;
+      crLoad();
+      crStartPoll();
+      setTimeout(function() { crEls.input.focus(); }, 100);
+    }
+
+    async function crJoin(e) {
+      e.preventDefault();
+      const name = crEls.nameInput.value.trim();
+      if (!name || name.length < 2) {
+        crEls.nameError.textContent = 'Name must be at least 2 characters';
+        return;
+      }
+      crEls.joinBtn.disabled = true;
+      crEls.nameError.textContent = '';
+
+      crState.userId = 'u_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      crState.userName = name;
+      localStorage.setItem('cr_user_id', crState.userId);
+      localStorage.setItem('cr_user_name', crState.userName);
+
+      try {
+        await sb(ROOM_TABLE, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: 'system',
+            user_name: 'System',
+            content: name + ' joined the chat',
+            is_system: true,
+          }),
+        });
+        crShowRoom();
+      } catch (err) {
+        crEls.nameError.textContent = err.message;
+      } finally {
+        crEls.joinBtn.disabled = false;
+      }
+    }
+
+    function crLeave() {
+      crStopPoll();
+      if (crState.userName) {
+        sb(ROOM_TABLE, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: 'system',
+            user_name: 'System',
+            content: crState.userName + ' left the chat',
+            is_system: true,
+          }),
+        }).catch(function() {});
+      }
+      localStorage.removeItem('cr_user_id');
+      localStorage.removeItem('cr_user_name');
+      crState.userId = null;
+      crState.userName = null;
+      crState.messages = [];
+      crState.lastId = 0;
+      crEls.messages.innerHTML = '<div class="cr-empty">Loading messages...</div>';
+      crShowNamePrompt();
+    }
+
+    async function crSend(e) {
+      e.preventDefault();
+      const content = crEls.input.value.trim();
+      if (!content || !crState.userId) return;
+      crEls.input.value = '';
+      crAutoResize();
+      try {
+        await sb(ROOM_TABLE, {
+          method: 'POST',
+          body: JSON.stringify({
+            user_id: crState.userId,
+            user_name: crState.userName,
+            content: content,
+            is_system: false,
+          }),
+        });
+        await crLoad();
+      } catch (err) {
+        alert('Failed to send: ' + err.message);
+        crEls.input.value = content;
+      }
+      crEls.input.focus();
+    }
+
+    async function crLoad() {
+      try {
+        const data = await sb(ROOM_TABLE + '?order=created_at.asc&limit=100');
+        const newMsgs = data || [];
+        const newLastId = newMsgs.length > 0 ? newMsgs[newMsgs.length - 1].id : 0;
+
+        // Track unread when modal is closed
+        if (!crState.isOpen && crState.lastId > 0 && newLastId > crState.lastId) {
+          const newCount = newMsgs.filter(function(m) {
+            return m.id > crState.lastId && !m.is_system && m.user_id !== crState.userId;
+          }).length;
+          if (newCount > 0) {
+            crState.unread += newCount;
+            crEls.badge.textContent = crState.unread > 9 ? '9+' : crState.unread;
+            crEls.badge.classList.add('active');
+          }
+        }
+
+        if (newLastId !== crState.lastId || crState.messages.length !== newMsgs.length) {
+          crState.messages = newMsgs;
+          crState.lastId = newLastId;
+          if (crState.isOpen) crRender();
+        }
+      } catch (err) {
+        console.error('CR load failed:', err);
+      }
+    }
+
+    function crRender() {
+      if (crState.messages.length === 0) {
+        crEls.messages.innerHTML = '<div class="cr-empty">No messages yet. Say hi!</div>';
+        return;
+      }
+      crEls.messages.innerHTML = crState.messages.map(function(msg) {
+        const isSystem = msg.is_system || msg.user_id === 'system';
+        const isMine = !isSystem && msg.user_id === crState.userId;
+        const time = crFormatTime(msg.created_at);
+        if (isSystem) {
+          return '<div class="cr-msg system"><div class="cr-msg-bubble">' + crEscape(msg.content) + '</div></div>';
+        }
+        const cls = isMine ? 'mine' : 'other';
+        return '<div class="cr-msg ' + cls + '">' +
+          (isMine ? '' : '<div class="cr-msg-name">' + crEscape(msg.user_name) + '</div>') +
+          '<div class="cr-msg-bubble">' + crEscape(msg.content) + '</div>' +
+          '<div class="cr-msg-time">' + time + '</div>' +
+        '</div>';
+      }).join('');
+      requestAnimationFrame(function() {
+        crEls.messages.scrollTop = crEls.messages.scrollHeight;
+      });
+    }
+
+    function crStartPoll() {
+      crStopPoll();
+      crState.poll = setInterval(crLoad, 2500);
+    }
+    function crStopPoll() {
+      if (crState.poll) { clearInterval(crState.poll); crState.poll = null; }
+    }
+
+    function crAutoResize() {
+      crEls.input.style.height = 'auto';
+      crEls.input.style.height = Math.min(crEls.input.scrollHeight, 100) + 'px';
+    }
+
+    // Wire up
+    crEls.openBtn.addEventListener('click', crOpen);
+    crEls.closeBtn.addEventListener('click', crClose);
+    crEls.leaveBtn.addEventListener('click', crLeave);
+    crEls.nameForm.addEventListener('submit', crJoin);
+    crEls.chatForm.addEventListener('submit', crSend);
+    crEls.input.addEventListener('input', crAutoResize);
+    crEls.input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        crEls.chatForm.dispatchEvent(new Event('submit'));
+      }
+    });
+    crEls.modal.addEventListener('click', function(e) {
+      if (e.target === crEls.modal) crClose();
+    });
+
+    // Background polling for unread badge (starts if already joined)
+    if (crState.userId && crState.userName) {
+      crStartPoll();
+    }
+  })();
+  </script>
+</body>
+</html>
